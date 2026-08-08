@@ -1,0 +1,35 @@
+fixture:
+  context: consumer-contract
+  expected:
+    ruleId: IAP-P002
+    result: FAIL
+---
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: applicationenvironments.platform.example.org
+spec:
+  group: platform.example.org
+  names:
+    kind: ApplicationEnvironment
+    plural: applicationenvironments
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [cloud, owner, deletionPolicy]
+              properties:
+                cloud:
+                  type: string
+                owner:
+                  type: string
+                deletionPolicy:
+                  type: string
+                  enum: [Delete, Orphan]
+                  description: Consumer chooses managed-resource lifecycle behavior.
