@@ -29,9 +29,12 @@ Resources:
         Size: 1024
       Environment:
         Variables:
-          IAAP_GUARD_GITHUB_CLIENT_ID: !Ref GitHubAppClientId
-          IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN: !Ref GitHubPrivateKeySecretArn
-          IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN: !Ref GitHubWebhookSecretArn
+          IAAP_GUARD_GITHUB_CLIENT_ID:
+            Ref: GitHubAppClientId
+          IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN:
+            Ref: GitHubPrivateKeySecretArn
+          IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN:
+            Ref: GitHubWebhookSecretArn
           IAAP_GUARD_GITHUB_API_URL: https://api.github.com
       Policies:
         - Version: '2012-10-17'
@@ -41,8 +44,8 @@ Resources:
               Action:
                 - secretsmanager:GetSecretValue
               Resource:
-                - !Ref GitHubPrivateKeySecretArn
-                - !Ref GitHubWebhookSecretArn
+                - Ref: GitHubPrivateKeySecretArn
+                - Ref: GitHubWebhookSecretArn
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: BUFFERED
@@ -50,4 +53,7 @@ Resources:
 Outputs:
   WebhookUrl:
     Description: Public HTTPS endpoint to configure as the GitHub App webhook URL.
-    Value: !GetAtt GuardFunctionUrl.FunctionUrl
+    Value:
+      Fn::GetAtt:
+        - GuardFunctionUrl
+        - FunctionUrl
