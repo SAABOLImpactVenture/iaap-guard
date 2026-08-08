@@ -1,0 +1,27 @@
+fixture:
+  contexts: [experience, consumer-contract]
+  expected:
+    ruleId: IAP-C001
+    result: FAIL
+---
+component: canonical-product-contract
+schema:
+  properties:
+    cloud:
+      type: string
+      enum: [aws, gcp]
+    owner:
+      type: string
+      minLength: 3
+      maxLength: 63
+---
+component: storefront-order-contract
+schema:
+  properties:
+    cloud:
+      type: string
+      enum: [aws, gcp, azure]
+    owner:
+      type: string
+      minLength: 2
+      maxLength: 80
