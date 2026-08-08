@@ -1,0 +1,27 @@
+{
+  "fixture": {
+    "context": "ai-authority",
+    "expectedCriticalFailures": 0
+  },
+  "mode": "proposal-only",
+  "requireHumanApproval": true,
+  "allowDirectApply": false,
+  "allowCredentialAccess": false,
+  "allowed": [
+    "read-product-contract",
+    "draft-product-request",
+    "read-policy-result",
+    "write-evidence"
+  ],
+  "denied": [
+    "kubectl",
+    "terraform",
+    "tfe-run",
+    "cloud-admin",
+    "read-secret",
+    "apply-resource",
+    "delete-resource",
+    "approve-change",
+    "merge-pr"
+  ]
+}
