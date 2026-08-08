@@ -30,7 +30,7 @@ Adapters remain thin around the same core:
 IaaP Guard Core
    ├── CLI
    ├── GitHub Action     # Phase 9 dogfood
-   └── GitHub App        # distribution after dogfood evidence
+   └── GitHub App        # Phase 10 public installation + Checks
 ```
 
 The adapter is not the product. The durable product IP is the system of IaaP product knowledge, rules, evidence, compatibility, and operating model.
@@ -67,7 +67,7 @@ Use `--format json` for the normalized machine-readable contract.
 
 ## Phase 9 GitHub Action
 
-Phase 9 adds a thin composite Action for dogfooding the same deterministic engine inside a repository workflow.
+Phase 9 proved a thin composite Action around the same deterministic engine across the six-repository IaaP portfolio.
 
 Pin it to an immutable commit:
 
@@ -86,7 +86,46 @@ steps:
       fail-on-failure: 'false'
 ```
 
-During dogfood, findings remain non-blocking until the repository baseline is reviewed. See `docs/GITHUB-ACTION.md` for the authority and evidence contract.
+See `docs/GITHUB-ACTION.md` and `artifacts/phase-9/` for the authority, repeatability, mutation, false-positive, and portfolio evidence.
+
+## Phase 10 public GitHub App beta
+
+Phase 10 adds the smallest public-installation adapter around the proven core.
+
+```text
+GitHub PR event
+    ↓
+Public GitHub App webhook
+    ↓
+X-Hub-Signature-256 verification
+    ↓
+Short-lived repository-scoped installation token
+    ↓
+Immutable PR-head repository snapshot
+    ↓
+Existing deterministic IaaP Guard core
+    ↓
+scan-result/v1
+    ↓
+IaaP Guard / Architecture Check Run
+```
+
+The initial hosting implementation uses **AWS Lambda + Function URL** because the core is already Python and the beta does not require a persistent database. Hosting remains replaceable; it is not part of the rule engine or consumer contract.
+
+The V0 App authority is frozen in `config/github-app-v0.json`:
+
+- Metadata: read;
+- Contents: read;
+- Pull requests: read;
+- Checks: write;
+- no PAT;
+- no repository content writes;
+- no workflow/administration permissions;
+- no cloud, Kubernetes, Terraform/TFE, or AI credentials.
+
+For each handled event, the installation token is narrowed to the **triggering repository** and discarded after the stateless invocation. The adapter publishes `IaaP Guard / Architecture` using the deterministic core conclusion: `success`, `neutral`, or `failure`.
+
+See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check Run, and beta-limit contract.
 
 ## V0 principles
 
@@ -105,23 +144,27 @@ During dogfood, findings remain non-blocking until the repository baseline is re
 ## Repository contents
 
 - `docs/PRODUCT.md` — product definition and explicit V0 exclusions.
-- `docs/ARCHITECTURE.md` — smallest useful core and adapter boundary.
+- `docs/ARCHITECTURE.md` — deterministic center and adapter boundaries.
 - `docs/RULE-CATALOG.md` — V0 deterministic rule semantics.
 - `docs/SCORING.md` — transparent coverage-based maturity model.
 - `docs/CORE.md` — implemented deterministic engine contract and limitations.
 - `docs/DOGFOOD.md` — Phase 9 six-repository evidence plan.
 - `docs/GITHUB-ACTION.md` — Phase 9 Action adapter and authority boundary.
-- `adr/` — architecture decisions for deterministic-first, context-aware analysis.
+- `docs/GITHUB-APP-BETA.md` — Phase 10 public GitHub App beta contract and deployment guide.
+- `config/github-app-v0.json` — machine-readable App permissions/events contract.
+- `deploy/aws-lambda/template.yaml` — minimal stateless beta runtime deployment.
+- `adr/` — architecture decisions for deterministic-first, context-aware analysis and bounded distribution.
 - `rules/catalog.yaml` — machine-readable V0 rule catalog.
 - `schemas/scan-result.schema.json` — normalized result contract.
 - `fixtures/` — positive and negative architecture cases.
-- `src/iaap_guard/` — deterministic core and CLI.
-- `tests/` — frozen fixture and engine-invariant tests.
+- `src/iaap_guard/` — deterministic core plus thin GitHub App adapter.
+- `tests/` — frozen fixture, engine-invariant, Phase 9 evidence, and Phase 10 adapter/security tests.
 - `action.yml` — thin GitHub Action dogfood adapter.
 
 ## Current status
 
 **PHASE 8 — Deterministic Core: COMPLETE**  
-**PHASE 9 — Dogfood POC: IN PROGRESS**
+**PHASE 9 — Dogfood POC: COMPLETE**  
+**PHASE 10 — Public Installable Beta: IN PROGRESS**
 
-The current Phase 9 objective is to prove the Action and deterministic engine against the actual six-repository portfolio before building the GitHub App webhook/check-run runtime.
+Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is now proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials.
