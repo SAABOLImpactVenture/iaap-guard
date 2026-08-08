@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "phase9-portfolio-baseline/v1",
+  "phase": "PHASE 9 — IaaP Guard Dogfood POC",
+  "guardCoreCommit": "66f5cf9bf466e7653ae7c8b07a6af5382c64d503",
+  "ruleCatalogVersion": "iaap-guard/v0.1.2",
+  "scoringModelVersion": "coverage/v1",
+  "repositories": [
+    {
+      "repository": "SAABOLImpactVenture/ai-powered-infrastructure-as-a-product",
+      "revision": {"sha": "24c47b959cb47088d668acc4fe637f116561f7f9", "ref": "refs/heads/main"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["evidence", "documentation-fixture", "unknown"]
+    },
+    {
+      "repository": "SAABOLImpactVenture/backstage-infrastructure-product-storefront-poc",
+      "revision": {"sha": "da7478093da63950ca15314b0724b4ab3be59986", "ref": "refs/pull/5/merge"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["consumer-contract", "experience", "evidence", "documentation-fixture", "unknown"]
+    },
+    {
+      "repository": "SAABOLImpactVenture/crossplane-multicloud-seed-poc",
+      "revision": {"sha": "403f958907e17d99d46dc0933fdc08d3d016efa0", "ref": "refs/pull/3/merge"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["bootstrap", "evidence", "documentation-fixture", "unknown"]
+    },
+    {
+      "repository": "SAABOLImpactVenture/multicloud-foundation-product-poc",
+      "revision": {"sha": "5bd7e2186c7720e18e4a37e19c566800dbb21b7b", "ref": "refs/pull/5/merge"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["consumer-contract", "control-plane-implementation", "bootstrap", "evidence", "documentation-fixture", "unknown"]
+    },
+    {
+      "repository": "SAABOLImpactVenture/composite-ai-infrastructure-product-poc",
+      "revision": {"sha": "be6b0842e8234e24cf8731b51685829c46da2e9b", "ref": "refs/pull/3/merge"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["consumer-contract", "ai-authority", "evidence", "documentation-fixture", "unknown"]
+    },
+    {
+      "repository": "SAABOLImpactVenture/multicloud-foundation-poc-integration",
+      "revision": {"sha": "102fecc92e11059538c0fce268199a95057d37f5", "ref": "refs/pull/15/merge"},
+      "conclusion": "success",
+      "overallScore": 100,
+      "findings": 0,
+      "detectedComponents": ["evidence", "documentation-fixture", "unknown"]
+    }
+  ]
+}
