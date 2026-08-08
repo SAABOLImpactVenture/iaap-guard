@@ -38,8 +38,9 @@ def classify(
 ) -> tuple[str, ...]:
     """Classify an artifact before rule evaluation.
 
-    Fixture metadata is an explicit test harness override. Production scans never
-    infer authority from fixture paths or comments.
+    Fixture metadata is an explicit single-fixture test harness override.
+    During a normal repository scan, files beneath fixtures/ remain test data
+    regardless of the unsafe architecture they intentionally contain.
     """
     fixture = fixture or {}
     explicit: set[str] = set()
@@ -51,12 +52,15 @@ def classify(
         return _ordered(explicit)
 
     lower_path = relative_path.lower()
+    if lower_path.startswith("fixtures/"):
+        return ("documentation-fixture",)
+
     contexts: set[str] = set()
     dicts = list(_dicts(documents))
     kinds = {str(item.get("kind", "")).lower() for item in dicts if item.get("kind")}
     api_versions = {str(item.get("apiVersion", "")).lower() for item in dicts if item.get("apiVersion")}
 
-    if relative_path.startswith("fixtures/") or lower_path.endswith(".md") or lower_path.startswith("docs/"):
+    if lower_path.endswith(".md") or lower_path.startswith("docs/"):
         contexts.add("documentation-fixture")
 
     if "template" in kinds and any("scaffolder.backstage.io" in value for value in api_versions):
