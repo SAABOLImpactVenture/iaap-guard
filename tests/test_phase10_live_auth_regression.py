@@ -32,7 +32,7 @@ class Phase10LiveAuthRegressionTests(unittest.TestCase):
         ):
             secrets = _load_app_secrets()
 
-        token = create_app_jwt(secrets.client_id, secrets.private_key, now=1_000_000)
+        token = create_app_jwt(secrets.app_id, secrets.private_key, now=1_000_000)
         claims = jwt.decode(
             token,
             private_key.public_key(),
