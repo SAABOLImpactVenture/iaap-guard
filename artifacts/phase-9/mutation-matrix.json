@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "phase9-mutation-matrix/v1",
+  "ruleCatalogVersion": "iaap-guard/v0.1.2",
+  "evidenceMethod": "Frozen controlled architecture mutation fixtures executed by the deterministic-core acceptance suite; portfolio repositories were not intentionally broken.",
+  "validationRunId": 31269178059,
+  "criticalRulesTotal": 6,
+  "criticalRulesDetected": 6,
+  "mutationFixturesTotal": 7,
+  "mutations": [
+    {"ruleId":"IAP-P001","fixture":"negative/consumer-terraform-workspace.yaml","mutation":"Expose Terraform/TFE workspace on consumer surface","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-P001","fixture":"negative/consumer-providerconfig.yaml","mutation":"Expose ProviderConfig on consumer surface","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-P002","fixture":"negative/consumer-lifecycle-policy.yaml","mutation":"Expose platform lifecycle policy to consumer","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-X001","fixture":"negative/experience-direct-provision.yaml","mutation":"Give experience layer direct provisioning action","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-A001","fixture":"negative/ai-apply-authority.json","mutation":"Grant AI direct apply/execution authority","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-A002","fixture":"negative/missing-approval.json","mutation":"Bypass accountable human approval","expected":"FAIL","actual":"FAIL","detected":true},
+    {"ruleId":"IAP-C001","fixture":"negative/storefront-domain-broader.yaml","mutation":"Broaden storefront accepted domain beyond canonical product contract","expected":"FAIL","actual":"FAIL","detected":true}
+  ],
+  "ruleCoveragePassed": true,
+  "allMutationFixturesExact": true
+}
