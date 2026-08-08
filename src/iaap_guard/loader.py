@@ -56,6 +56,10 @@ def _parse(path: Path, text: str) -> tuple[tuple[Any, ...], dict[str, Any]]:
 def load_artifacts(root: Path) -> list[Artifact]:
     root = root.resolve()
     base = root if root.is_dir() else root.parent
+    # A single frozen fixture is intentionally evaluated as the context it
+    # represents. During a normal directory/repository scan, fixture metadata
+    # is never allowed to turn test data into live architecture.
+    honor_fixture_context = root.is_file()
     artifacts: list[Artifact] = []
     for path in iter_candidate_files(root):
         try:
@@ -64,7 +68,13 @@ def load_artifacts(root: Path) -> list[Artifact]:
             continue
         documents, fixture = _parse(path, text)
         relative = path.relative_to(base).as_posix()
-        contexts = classify(path, relative, documents, text, fixture)
+        contexts = classify(
+            path,
+            relative,
+            documents,
+            text,
+            fixture if honor_fixture_context else {},
+        )
         artifacts.append(
             Artifact(
                 path=path,
