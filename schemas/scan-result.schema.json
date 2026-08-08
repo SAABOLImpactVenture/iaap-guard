@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.saabol.example/iaap-guard/scan-result/v1.json",
+  "title": "IaaP Guard Scan Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "ruleCatalogVersion",
+    "scoringModelVersion",
+    "repository",
+    "revision",
+    "detectedComponents",
+    "findings",
+    "ruleResults",
+    "dimensionScores",
+    "overallScore",
+    "conclusion"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "scan-result/v1"},
+    "ruleCatalogVersion": {"type": "string", "minLength": 1},
+    "scoringModelVersion": {"type": "string", "minLength": 1},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1}
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha"],
+      "properties": {
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "ref": {"type": "string"}
+      }
+    },
+    "detectedComponents": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "consumer-contract",
+          "experience",
+          "ai-authority",
+          "control-plane-implementation",
+          "bootstrap",
+          "evidence",
+          "documentation-fixture",
+          "unknown"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleId",
+          "result",
+          "dimension",
+          "componentContext",
+          "path",
+          "evidence",
+          "recommendation",
+          "scoring",
+          "experimental"
+        ],
+        "properties": {
+          "ruleId": {"type": "string", "pattern": "^IAP-[A-Z]+[0-9]+$"},
+          "result": {"enum": ["WARNING", "FAIL"]},
+          "dimension": {"type": "string", "minLength": 1},
+          "componentContext": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "line": {"type": ["integer", "null"], "minimum": 1},
+          "evidence": {"type": "string", "minLength": 1},
+          "recommendation": {"type": "string", "minLength": 1},
+          "scoring": {"type": "boolean"},
+          "experimental": {"type": "boolean"}
+        }
+      }
+    },
+    "ruleResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "result", "dimension", "scoring", "experimental"],
+        "properties": {
+          "ruleId": {"type": "string", "pattern": "^IAP-[A-Z]+[0-9]+$"},
+          "result": {"enum": ["PASS", "WARNING", "FAIL", "NOT_APPLICABLE"]},
+          "dimension": {"type": "string", "minLength": 1},
+          "scoring": {"type": "boolean"},
+          "experimental": {"type": "boolean"}
+        }
+      }
+    },
+    "dimensionScores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "passed", "applicable", "score"],
+        "properties": {
+          "dimension": {"type": "string", "minLength": 1},
+          "passed": {"type": "integer", "minimum": 0},
+          "applicable": {"type": "integer", "minimum": 0},
+          "score": {"type": ["integer", "null"], "minimum": 0, "maximum": 100}
+        }
+      }
+    },
+    "overallScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
+    "conclusion": {"enum": ["success", "neutral", "failure"]}
+  }
+}
