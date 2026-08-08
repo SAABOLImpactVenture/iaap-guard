@@ -86,10 +86,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # no
     try:
         headers = _headers(event)
         raw_body = _body_bytes(event)
-        secrets = _load_app_secrets()
-        if not verify_webhook_signature(raw_body, secrets.webhook_secret, headers.get("x-hub-signature-256")):
+        webhook_secret = _load_secret(
+            "IAAP_GUARD_GITHUB_WEBHOOK_SECRET",
+            "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN",
+        )
+        if not verify_webhook_signature(raw_body, webhook_secret, headers.get("x-hub-signature-256")):
             return _response(401, {"error": "invalid_webhook_signature"})
 
+        secrets = _load_app_secrets()
         event_name = headers.get("x-github-event")
         delivery = headers.get("x-github-delivery")
         if not event_name:
