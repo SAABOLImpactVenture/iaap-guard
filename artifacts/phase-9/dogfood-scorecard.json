@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "phase9-dogfood-scorecard/v1",
+  "phase": "PHASE 9 — IaaP Guard Dogfood POC",
+  "ruleset": "iaap-guard/v0.1.2",
+  "scoringModel": "coverage/v1",
+  "criteria": [
+    {"criterion":"6/6 repositories scan without scanner error","result":"PASS","evidence":"6/6 successful normalized baseline scans"},
+    {"criterion":"Immutable source revision and exact ruleset/scoring identity","result":"PASS","evidence":"All repository results contain revision SHA/ref, iaap-guard/v0.1.2, coverage/v1"},
+    {"criterion":"Zero unexplained critical FAIL findings","result":"PASS","evidence":"0 findings across final accepted portfolio baselines"},
+    {"criterion":"Implementation terminology and negative fixtures do not create false critical FAILs","result":"PASS","evidence":"Final portfolio baselines 100/100; context-aware classification preserved"},
+    {"criterion":"Every critical mutation detected with stable rule ID","result":"PASS","evidence":"6/6 critical rules, 7/7 controlled mutation fixtures"},
+    {"criterion":"Same immutable input produces identical normalized result","result":"PASS","evidence":"6/6 repeat scans byte-identical"},
+    {"criterion":"No scanned repository code executed","result":"PASS","evidence":"Static file loader/parser architecture; Action invokes Guard core only"},
+    {"criterion":"No cloud, Kubernetes, TFE, or AI credentials required","result":"PASS","evidence":"Workflow permissions contents:read; no infrastructure credentials introduced"},
+    {"criterion":"False positives recorded and corrected rather than silently suppressed","result":"PASS","evidence":"IAP-E001 v0.1.1 defect recorded, corrected in v0.1.2, regression protected"}
+  ],
+  "portfolio": {"repositories": 6, "success": 6, "score100": 6, "findings": 0},
+  "exitGate": "PASS",
+  "nextPhase": "PHASE 10 — Public Installable Beta"
+}
