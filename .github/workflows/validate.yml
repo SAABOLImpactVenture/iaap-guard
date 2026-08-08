@@ -1,4 +1,4 @@
-name: Phase 8 specification validation
+name: Phase 8 deterministic core validation
 
 on:
   pull_request:
