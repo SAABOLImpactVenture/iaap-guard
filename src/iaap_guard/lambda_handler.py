@@ -3,14 +3,20 @@ from __future__ import annotations
 import base64
 import json
 import os
-from functools import lru_cache
 from typing import Any
 
-from .github_app import AppSecrets, GitHubApi, GitHubAppError, handle_github_event, verify_webhook_signature
+from .github_app import AppSecrets, GitHubAppError, verify_webhook_signature
+from .github_beta_runtime import BetaGitHubApi, handle_beta_github_event
 
 
-@lru_cache(maxsize=4)
 def _secret_from_aws(secret_arn: str) -> str:
+    """Read the current Secrets Manager value.
+
+    Phase 10 intentionally avoids process-lifetime caching so webhook-secret or
+    private-key rotation under the same ARN is observed by warm Lambda
+    environments without requiring a redeploy.
+    """
+
     import boto3
 
     response = boto3.client("secretsmanager").get_secret_value(SecretId=secret_arn)
@@ -30,7 +36,7 @@ def _load_secret(direct_env: str, arn_env: str) -> str:
     raise RuntimeError(f"configure {direct_env} for local testing or {arn_env} for deployed runtime")
 
 
-def _load_app_secrets() -> AppSecrets:
+def _load_app_secrets(*, webhook_secret: str | None = None) -> AppSecrets:
     app_id_raw = os.environ.get("IAAP_GUARD_GITHUB_APP_ID", "").strip()
     if not app_id_raw:
         raise RuntimeError("IAAP_GUARD_GITHUB_APP_ID is required")
@@ -43,7 +49,9 @@ def _load_app_secrets() -> AppSecrets:
     return AppSecrets(
         app_id=app_id,
         private_key=_load_secret("IAAP_GUARD_GITHUB_PRIVATE_KEY", "IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN"),
-        webhook_secret=_load_secret("IAAP_GUARD_GITHUB_WEBHOOK_SECRET", "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN"),
+        webhook_secret=webhook_secret
+        if webhook_secret is not None
+        else _load_secret("IAAP_GUARD_GITHUB_WEBHOOK_SECRET", "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN"),
     )
 
 
@@ -92,7 +100,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # no
         if not verify_webhook_signature(raw_body, webhook_secret, headers.get("x-hub-signature-256")):
             return _response(401, {"error": "invalid_webhook_signature"})
 
-        secrets = _load_app_secrets()
+        secrets = _load_app_secrets(webhook_secret=webhook_secret)
         event_name = headers.get("x-github-event")
         delivery = headers.get("x-github-delivery")
         if not event_name:
@@ -101,8 +109,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # no
         if not isinstance(payload, dict):
             return _response(400, {"error": "invalid_json_payload"})
 
-        api = GitHubApi(base_url=os.environ.get("IAAP_GUARD_GITHUB_API_URL", "https://api.github.com"))
-        result = handle_github_event(event_name, payload, api=api, secrets=secrets)
+        api = BetaGitHubApi(base_url=os.environ.get("IAAP_GUARD_GITHUB_API_URL", "https://api.github.com"))
+        result = handle_beta_github_event(event_name, payload, api=api, secrets=secrets)
         result["delivery"] = delivery
         return _response(200 if result.get("handled") else 202, result)
     except (ValueError, json.JSONDecodeError) as exc:
