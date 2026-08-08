@@ -83,14 +83,53 @@ The core must:
 
 ## GitHub-native progression
 
-### Phase 8
-Local deterministic core contract only.
+### Phase 8 — COMPLETE
 
-### Phase 9
-Use the same core in GitHub Actions for dogfood. The Action job itself can serve as the first repository check surface.
+The local deterministic core, rule catalog, normalized result contract, fixture matrix, and validation suite were established before distribution infrastructure.
 
-### Public installable beta
-Wrap the same core with a stateless GitHub App webhook adapter. The adapter verifies webhooks, obtains an installation token, reads relevant repository/PR artifacts, runs the core, and writes a Check Run.
+### Phase 9 — COMPLETE
+
+The same core was wrapped by a thin GitHub Action and dogfooded across the six-repository IaaP portfolio. The final accepted baselines were 6/6 successful, 100/100, with zero findings. Repeatability and controlled critical-mutation coverage were frozen under `artifacts/phase-9/`.
+
+### Phase 10 — Public installable beta
+
+The same core is now wrapped by a stateless public GitHub App adapter:
+
+```text
+GitHub PR / Guard rerequest
+        ↓
+GitHub webhook
+        ↓
+signature verification
+        ↓
+GitHub App JWT
+        ↓
+repository-scoped installation token
+        ↓
+PR file relevance check
+        ↓
+immutable PR-head snapshot when relevant
+        ↓
+IaaP Guard deterministic core
+        ↓
+IaaP Guard / Architecture Check Run
+```
+
+The initial reference hosting implementation is AWS Lambda with a Function URL. That choice minimizes beta infrastructure because the core is already Python and no persistent state is required. It is a replaceable distribution implementation, not part of the Guard product contract.
+
+The GitHub App authority remains narrow:
+
+- Metadata read;
+- Contents read;
+- Pull requests read;
+- Checks write;
+- installation token narrowed to the triggering repository;
+- no PAT;
+- no repository content writes;
+- no administration/workflow authority;
+- no customer cloud, Kubernetes, Terraform/TFE, or AI credentials.
+
+The public Function URL does not replace GitHub webhook authentication. The runtime validates `X-Hub-Signature-256` before parsing or acting on a delivery.
 
 No persistent customer database is required for the first installable beta.
 
