@@ -1,0 +1,16 @@
+fixture:
+  context: bootstrap
+  expectedCriticalFailures: 0
+  expected:
+    ruleId: IAP-P003
+    result: NOT_APPLICABLE
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crossplane-seed-boundaries
+  namespace: crossplane-system
+data:
+  purpose: minimal-trusted-bootstrap
+  consumerProductsOwnedHere: "false"
+  cloudCredentialsStoredHere: "false"
