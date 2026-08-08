@@ -69,6 +69,10 @@ class Phase10ContractTests(unittest.TestCase):
             ["PyYAML==6.0.2", "PyJWT==2.13.0", "cryptography==49.0.0"],
         )
 
+    def test_sam_builder_uses_runtime_dependency_entrypoint(self):
+        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(requirements, ["-r requirements-app.txt"])
+
 
 if __name__ == "__main__":
     unittest.main()
