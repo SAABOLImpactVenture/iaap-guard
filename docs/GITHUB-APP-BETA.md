@@ -69,9 +69,11 @@ Generate a GitHub App private key after registration. Store the PEM in AWS Secre
 
 The deployed runtime uses three App values:
 
-- `IAAP_GUARD_GITHUB_CLIENT_ID` — non-secret GitHub App client ID and preferred JWT issuer;
+- `IAAP_GUARD_GITHUB_APP_ID` — the non-secret numeric GitHub App ID used as the JWT `iss` claim;
 - `IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN` — Secrets Manager ARN containing the raw PEM private key;
 - `IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN` — Secrets Manager ARN containing the raw webhook secret.
+
+The GitHub App **Client ID is not the JWT issuer used by this beta runtime**. Live Phase 10 installation testing against the GitHub REST API version pinned by the adapter returned HTTP 401 when a string Client ID was used: `Issuer claim (iss) must be an Integer`. The deployment therefore requires the numeric App ID explicitly.
 
 For local unit testing only, direct `IAAP_GUARD_GITHUB_PRIVATE_KEY` and `IAAP_GUARD_GITHUB_WEBHOOK_SECRET` environment variables are supported. Do not use direct secret environment variables for the deployed beta.
 
@@ -81,15 +83,16 @@ The Lambda execution role can only call `secretsmanager:GetSecretValue` against 
 
 For each handled delivery:
 
-1. Verify `X-Hub-Signature-256` using constant-time HMAC comparison.
-2. Generate a short-lived RS256 GitHub App JWT.
-3. Exchange the App JWT for an installation access token.
-4. Scope that installation token to **only the repository that triggered the webhook** and to:
+1. Load only the webhook signing secret and verify `X-Hub-Signature-256` using constant-time HMAC comparison.
+2. Reject an invalid webhook before loading the GitHub App private key or App ID.
+3. Load the numeric GitHub App ID and private key and generate a short-lived RS256 GitHub App JWT.
+4. Exchange the App JWT for an installation access token.
+5. Scope that installation token to **only the repository that triggered the webhook** and to:
    - Contents: read;
    - Pull requests: read;
    - Checks: write.
-5. Never assume a fixed installation-token length or format.
-6. Discard the token after the invocation.
+6. Never assume a fixed installation-token length or format.
+7. Discard the token after the invocation.
 
 No personal access token is used.
 
@@ -137,7 +140,7 @@ Prerequisites:
 
 - an AWS account/role permitted to deploy the SAM stack;
 - AWS SAM CLI;
-- the GitHub App client ID;
+- the numeric GitHub App ID from the App General settings page;
 - one Secrets Manager secret containing the raw GitHub App PEM private key;
 - one Secrets Manager secret containing the raw webhook secret.
 
@@ -152,7 +155,7 @@ Deploy using your chosen stack/region and pass the three parameters:
 ```bash
 sam deploy --guided \
   --parameter-overrides \
-    GitHubAppClientId=<client-id> \
+    GitHubAppId=<numeric-app-id> \
     GitHubPrivateKeySecretArn=<private-key-secret-arn> \
     GitHubWebhookSecretArn=<webhook-secret-arn>
 ```
