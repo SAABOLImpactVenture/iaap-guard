@@ -1,0 +1,22 @@
+fixture:
+  context: control-plane-implementation
+  expectedCriticalFailures: 0
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: application-environment
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: ApplicationEnvironment
+  resources:
+    - name: storage
+      base:
+        apiVersion: s3.aws.upbound.io/v1beta1
+        kind: Bucket
+        spec:
+          providerConfigRef:
+            name: platform-runtime
+          forProvider:
+            region: us-east-1
