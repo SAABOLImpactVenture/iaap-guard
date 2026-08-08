@@ -1,0 +1,5 @@
+Phase 10 live no-relevant-change proof.
+
+This unsupported .txt path exists only to prove that the installed IaaP Guard GitHub App returns a successful no-relevant-change Check without downloading/scanning the repository snapshot.
+
+Do not merge this proof branch.
