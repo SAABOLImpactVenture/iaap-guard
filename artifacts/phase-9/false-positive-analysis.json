@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "phase9-false-positive-analysis/v1",
+  "finalRuleset": "iaap-guard/v0.1.2",
+  "finalCriticalFalseFailures": 0,
+  "resolvedRuleDefects": [
+    {
+      "ruleId": "IAP-E001",
+      "classification": "false-positive applicability defect",
+      "affectedRepositories": [
+        "SAABOLImpactVenture/backstage-infrastructure-product-storefront-poc",
+        "SAABOLImpactVenture/composite-ai-infrastructure-product-poc"
+      ],
+      "observedUnder": "iaap-guard/v0.1.1",
+      "observedRuns": [31268811616, 31268824431],
+      "symptom": {"conclusion":"neutral","overallScore":80,"finding":"IAP-E001 WARNING"},
+      "rootCause": "Consumer-contract presence made lifecycle/status evidence applicable even when the repository did not own infrastructure reconciliation.",
+      "correction": "iaap-guard/v0.1.2 limits IAP-E001 applicability to control-plane-implementation.",
+      "correctedRuns": [31269601881, 31269623171],
+      "correctedResult": {"conclusion":"success","overallScore":100,"findings":0},
+      "suppressedByRepositoryName": false
+    }
+  ],
+  "operationalLearning": [
+    {
+      "classification": "GitHub Actions distribution boundary, not a scanner finding",
+      "observation": "A public repository cannot directly consume an internal repository Action.",
+      "failedExperiment": "SAABOLImpactVenture/ai-powered-infrastructure-as-a-product#104",
+      "resolution": "Scan the public program hub from the internal IaaP Guard runner with explicit target repository/revision/ref identity.",
+      "patRequired": false,
+      "guardMadePublic": false
+    }
+  ]
+}
