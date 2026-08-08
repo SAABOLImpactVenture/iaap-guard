@@ -48,12 +48,15 @@ jobs:
 
           result = json.loads(Path(os.environ['RESULT_PATH']).read_text(encoding='utf-8'))
           assert result['schemaVersion'] == 'scan-result/v1'
-          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.0'
+          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.1'
           assert result['scoringModelVersion'] == 'coverage/v1'
           assert result['repository']['name'] == os.environ['GITHUB_REPOSITORY']
           assert result['revision']['sha'] == os.environ['GITHUB_SHA']
           assert result['conclusion'] == os.environ['GUARD_CONCLUSION']
           assert not any(f['path'].startswith('fixtures/') and f['result'] == 'FAIL' for f in result['findings'])
+          e001 = next(item for item in result['ruleResults'] if item['ruleId'] == 'IAP-E001')
+          assert e001['result'] == 'NOT_APPLICABLE'
+          assert not any(f['ruleId'] == 'IAP-E001' for f in result['findings'])
           print(f"verified self-scan: conclusion={result['conclusion']} score={result['overallScore']} findings={len(result['findings'])}")
           PY
       - uses: actions/upload-artifact@v6
