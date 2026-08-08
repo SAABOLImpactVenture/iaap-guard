@@ -1,6 +1,6 @@
 # IaaP Guard V0 Rule Catalog
 
-Rule catalog version: `iaap-guard/v0.1.0`
+Rule catalog version: `iaap-guard/v0.1.2`
 
 ## Rule design requirements
 
@@ -105,12 +105,12 @@ The mere presence of CI is not sufficient if it does not validate the relevant p
 ### IAP-E001 — Product implementation lacks status/evidence/lifecycle path
 
 **Dimension:** Evidence Readiness  
-**Applies to:** `consumer-contract`, `control-plane-implementation`, `evidence`  
+**Applies to:** `control-plane-implementation`  
 **Violation:** `WARNING`
 
-Warn when a product implementation has no recognizable status, evidence, reconciliation-result, teardown, or lifecycle verification path appropriate to the analyzed architecture.
+Warn when an infrastructure product implementation has no recognizable status, evidence, reconciliation-result, teardown, or lifecycle verification path appropriate to the analyzed architecture.
 
-V0 does not require every evidence mechanism simultaneously; it requires a machine-observable product lifecycle/evidence path.
+A consumer contract, storefront, Composite AI assistant, or evidence-only repository does not acquire a reconciliation/lifecycle obligation merely because it participates in the product architecture. V0 requires actual `control-plane-implementation` context before this rule is applicable.
 
 ### IAP-CX01 — Possible multiple authoritative reconcilers
 
