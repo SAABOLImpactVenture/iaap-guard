@@ -1,0 +1,15 @@
+fixture:
+  context: consumer-contract
+  expected:
+    ruleId: IAP-G001
+    result: WARNING
+---
+apiVersion: iaapguard.example.org/v1alpha1
+kind: ProductRepositoryEvidence
+metadata:
+  name: unvalidated-product-contract
+spec:
+  productContractPresent: true
+  deterministicValidationPaths: []
+  ciPresent: true
+  ciValidatesProductBoundary: false
