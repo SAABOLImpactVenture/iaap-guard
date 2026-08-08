@@ -1,0 +1,24 @@
+fixture:
+  context: control-plane-implementation
+  expected:
+    ruleId: IAP-E001
+    result: WARNING
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: opaque-environment
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: OpaqueEnvironment
+  resources:
+    - name: storage
+      base:
+        apiVersion: s3.aws.upbound.io/v1beta1
+        kind: Bucket
+        spec:
+          forProvider:
+            region: us-east-1
+# Intentionally no declared status mapping, evidence artifact, reconciliation verification,
+# teardown verification, or other machine-observable lifecycle evidence in this fixture scope.
