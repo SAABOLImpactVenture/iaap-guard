@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "scan-result/v1",
+  "ruleCatalogVersion": "iaap-guard/v0.1.2",
+  "scoringModelVersion": "coverage/v1",
+  "repository": {"name": "SAABOLImpactVenture/backstage-infrastructure-product-storefront-poc"},
+  "revision": {"sha": "da7478093da63950ca15314b0724b4ab3be59986", "ref": "refs/pull/5/merge"},
+  "detectedComponents": ["consumer-contract", "experience", "evidence", "documentation-fixture", "unknown"],
+  "findings": [],
+  "ruleResults": [
+    {"ruleId":"IAP-P001","result":"PASS","dimension":"Consumer Boundary","scoring":true,"experimental":false},
+    {"ruleId":"IAP-P002","result":"PASS","dimension":"Consumer Boundary","scoring":true,"experimental":false},
+    {"ruleId":"IAP-X001","result":"PASS","dimension":"Experience / Authority","scoring":true,"experimental":false},
+    {"ruleId":"IAP-A001","result":"NOT_APPLICABLE","dimension":"Experience / Authority","scoring":true,"experimental":false},
+    {"ruleId":"IAP-A002","result":"PASS","dimension":"Governance","scoring":true,"experimental":false},
+    {"ruleId":"IAP-C001","result":"NOT_APPLICABLE","dimension":"Consumer Boundary","scoring":true,"experimental":false},
+    {"ruleId":"IAP-P003","result":"NOT_APPLICABLE","dimension":"Product Abstraction","scoring":true,"experimental":false},
+    {"ruleId":"IAP-P004","result":"PASS","dimension":"Product Abstraction","scoring":true,"experimental":false},
+    {"ruleId":"IAP-G001","result":"PASS","dimension":"Governance","scoring":true,"experimental":false},
+    {"ruleId":"IAP-E001","result":"NOT_APPLICABLE","dimension":"Evidence Readiness","scoring":true,"experimental":false},
+    {"ruleId":"IAP-CX01","result":"NOT_APPLICABLE","dimension":"Control-Plane Separation","scoring":false,"experimental":true}
+  ],
+  "dimensionScores": [
+    {"dimension":"Product Abstraction","passed":1,"applicable":1,"score":100},
+    {"dimension":"Consumer Boundary","passed":2,"applicable":2,"score":100},
+    {"dimension":"Experience / Authority","passed":1,"applicable":1,"score":100},
+    {"dimension":"Control-Plane Separation","passed":0,"applicable":0,"score":null},
+    {"dimension":"Governance","passed":2,"applicable":2,"score":100},
+    {"dimension":"Evidence Readiness","passed":0,"applicable":0,"score":null}
+  ],
+  "overallScore": 100,
+  "conclusion": "success"
+}
