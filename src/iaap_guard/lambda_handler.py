@@ -41,8 +41,7 @@ def _load_app_secrets() -> AppSecrets:
     if app_id <= 0:
         raise RuntimeError("IAAP_GUARD_GITHUB_APP_ID must be a positive integer")
     return AppSecrets(
-        # AppSecrets retains the V0 field name `client_id`; the JWT issuer value is the numeric App ID.
-        client_id=app_id,  # type: ignore[arg-type]
+        app_id=app_id,
         private_key=_load_secret("IAAP_GUARD_GITHUB_PRIVATE_KEY", "IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN"),
         webhook_secret=_load_secret("IAAP_GUARD_GITHUB_WEBHOOK_SECRET", "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN"),
     )
