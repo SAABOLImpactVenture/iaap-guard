@@ -130,7 +130,7 @@ class GitHubApi:
     ) -> Any:
         url = path if path.startswith("https://") else f"{self.base_url}{path}"
         headers = {
-            "Accept": "application/vnd.github+json" if accept_json else "application/octet-stream",
+            "Accept": "application/vnd.github+json",
             "User-Agent": "iaap-guard-phase-10-beta",
             "X-GitHub-Api-Version": GITHUB_API_VERSION,
         }
