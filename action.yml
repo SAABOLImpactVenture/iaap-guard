@@ -1,39 +1,39 @@
 name: IaaP Guard
 
-description: Deterministic Infrastructure-as-a-Product architecture and evidence guard
+description: "Deterministic Infrastructure-as-a-Product architecture and evidence guard"
 
-author: SAABOL Impact Venture
+author: "SAABOL Impact Venture"
 
 inputs:
   target:
-    description: Repository-relative path to scan
+    description: "Repository-relative path to scan"
     required: false
-    default: .
+    default: "."
   output:
-    description: Repository-relative JSON result path
+    description: "Repository-relative JSON result path"
     required: false
-    default: artifacts/iaap-guard/scan-result.json
+    default: "artifacts/iaap-guard/scan-result.json"
   fail-on-failure:
-    description: Fail the workflow step when IaaP Guard concludes failure
+    description: "Fail the workflow step when IaaP Guard concludes failure"
     required: false
     default: "false"
 
 outputs:
   conclusion:
-    description: IaaP Guard conclusion: success, neutral, or failure
+    description: "IaaP Guard conclusion: success, neutral, or failure"
     value: ${{ steps.scan.outputs.conclusion }}
   score:
-    description: Overall coverage score, or empty when no scoring controls apply
+    description: "Overall coverage score, or empty when no scoring controls apply"
     value: ${{ steps.scan.outputs.score }}
   result-path:
-    description: Repository-relative path of the normalized scan-result/v1 JSON
+    description: "Repository-relative path of the normalized scan-result/v1 JSON"
     value: ${{ steps.scan.outputs.result-path }}
   findings:
-    description: Number of WARNING/FAIL findings
+    description: "Number of WARNING/FAIL findings"
     value: ${{ steps.scan.outputs.findings }}
 
 runs:
-  using: composite
+  using: "composite"
   steps:
     - name: Install bounded runtime dependency
       shell: bash
