@@ -1,0 +1,19 @@
+fixture:
+  context: control-plane-implementation
+  expected:
+    ruleId: IAP-CX01
+    result: WARNING
+  nonScoring: true
+---
+apiVersion: iaapguard.example.org/v1alpha1
+kind: ReconciliationOwnership
+metadata:
+  name: shared-network
+spec:
+  externalResource: cloud-network/payments-shared
+  activeReconcilers:
+    - type: crossplane
+      source: compositions/network.yaml
+    - type: terraform-enterprise
+      source: workspace/payments-shared-network
+  handoffDeclared: false

@@ -1,0 +1,56 @@
+fixtureContractVersion: v0.1.0
+cases:
+  - path: good/product-contract.yaml
+    expectedCriticalFailures: 0
+    expected:
+      IAP-P004: PASS
+  - path: good/providerconfig-behind-implementation.yaml
+    expectedCriticalFailures: 0
+    expected:
+      IAP-P001: NOT_APPLICABLE
+  - path: good/ai-denylist.json
+    expectedCriticalFailures: 0
+    expected:
+      IAP-A001: PASS
+      IAP-A002: PASS
+  - path: good/bootstrap-no-product.yaml
+    expectedCriticalFailures: 0
+    expected:
+      IAP-P003: NOT_APPLICABLE
+  - path: negative/consumer-terraform-workspace.yaml
+    expected:
+      IAP-P001: FAIL
+  - path: negative/consumer-providerconfig.yaml
+    expected:
+      IAP-P001: FAIL
+  - path: negative/experience-direct-provision.yaml
+    expected:
+      IAP-X001: FAIL
+  - path: negative/ai-apply-authority.json
+    expected:
+      IAP-A001: FAIL
+  - path: negative/consumer-lifecycle-policy.yaml
+    expected:
+      IAP-P002: FAIL
+  - path: negative/missing-owner.yaml
+    expected:
+      IAP-P004: WARNING
+  - path: negative/no-product-abstraction.yaml
+    expected:
+      IAP-P003: WARNING
+  - path: negative/missing-validation.yaml
+    expected:
+      IAP-G001: WARNING
+  - path: negative/reconciler-conflict.yaml
+    expected:
+      IAP-CX01: WARNING
+    nonScoring: true
+  - path: negative/missing-approval.json
+    expected:
+      IAP-A002: FAIL
+  - path: negative/missing-evidence.yaml
+    expected:
+      IAP-E001: WARNING
+  - path: negative/storefront-domain-broader.yaml
+    expected:
+      IAP-C001: FAIL

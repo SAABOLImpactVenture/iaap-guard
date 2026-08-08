@@ -1,0 +1,22 @@
+{
+  "fixture": {
+    "context": "ai-authority",
+    "expected": {
+      "ruleId": "IAP-A001",
+      "result": "FAIL"
+    }
+  },
+  "mode": "autonomous",
+  "requireHumanApproval": false,
+  "allowDirectApply": true,
+  "allowCredentialAccess": true,
+  "allowed": [
+    "read-product-contract",
+    "cloud-admin",
+    "read-secret",
+    "apply-resource",
+    "delete-resource",
+    "tfe-run"
+  ],
+  "denied": []
+}
