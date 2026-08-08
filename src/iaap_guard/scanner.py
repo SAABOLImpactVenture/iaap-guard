@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .applicability import enforce_catalog_applicability
 from .loader import load_artifacts
 from .model import CONTEXT_ORDER
 from .rules import evaluate_rules, load_catalog
@@ -30,6 +31,12 @@ def scan_path(
     catalog = load_catalog(Path(catalog_path) if catalog_path else DEFAULT_CATALOG)
     artifacts = load_artifacts(target_path)
     rule_results, findings = evaluate_rules(artifacts, catalog)
+    rule_results, findings = enforce_catalog_applicability(
+        rule_results,
+        findings,
+        artifacts,
+        catalog,
+    )
     dimension_scores, overall, conclusion = score_results(rule_results, catalog["dimensions"])
 
     present = {context for artifact in artifacts for context in artifact.contexts}

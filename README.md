@@ -4,9 +4,9 @@
 
 IaaP Guard is a GitHub-native architecture and product-governance system that evaluates whether infrastructure is actually being engineered as a product.
 
-## Phase 8 boundary
+## Product architecture
 
-The first product is intentionally small: a deterministic, stateless repository/PR evaluator with a reusable local core. It does **not** provision infrastructure, connect to customer clouds or Kubernetes clusters, run Terraform/TFE, remediate changes, or compete with generic security scanners.
+The product is intentionally small: a deterministic, stateless repository/PR evaluator with a reusable local core. It does **not** provision infrastructure, connect to customer clouds or Kubernetes clusters, run Terraform/TFE, remediate changes, or compete with generic security scanners.
 
 ```text
 Repository / PR files
@@ -24,7 +24,7 @@ Coverage-based maturity score
 JSON + human-readable result
 ```
 
-The same core can later be wrapped by:
+Adapters remain thin around the same core:
 
 ```text
 IaaP Guard Core
@@ -37,7 +37,7 @@ The adapter is not the product. The durable product IP is the system of IaaP pro
 
 ## Deterministic core
 
-The Phase 8 core now implements:
+The merged Phase 8 core implements:
 
 - context classification before rule evaluation;
 - safe YAML/JSON and bounded text loading without executing repository code;
@@ -46,7 +46,7 @@ The Phase 8 core now implements:
 - transparent `coverage/v1` scoring;
 - human-readable and JSON CLI output;
 - the frozen positive/negative fixture contract; and
-- repeatability, schema, scoring, and non-execution tests.
+- repeatability, schema, scoring, fixture-isolation, and non-execution tests.
 
 Run the complete validation gate:
 
@@ -65,6 +65,29 @@ PYTHONPATH=src python3 -m iaap_guard.cli scan . \
 
 Use `--format json` for the normalized machine-readable contract.
 
+## Phase 9 GitHub Action
+
+Phase 9 adds a thin composite Action for dogfooding the same deterministic engine inside a repository workflow.
+
+Pin it to an immutable commit:
+
+```yaml
+permissions:
+  contents: read
+
+steps:
+  - uses: actions/checkout@v7
+  - uses: actions/setup-python@v7
+    with:
+      python-version: '3.12'
+  - id: iaap-guard
+    uses: SAABOLImpactVenture/iaap-guard@<40-character-commit-sha>
+    with:
+      fail-on-failure: 'false'
+```
+
+During dogfood, findings remain non-blocking until the repository baseline is reviewed. See `docs/GITHUB-ACTION.md` for the authority and evidence contract.
+
 ## V0 principles
 
 - Product over tooling.
@@ -79,23 +102,26 @@ Use `--format json` for the normalized machine-readable contract.
 - Context-aware analysis rather than naive keyword grep.
 - Minimum effort first.
 
-## Phase 8 contents
+## Repository contents
 
 - `docs/PRODUCT.md` — product definition and explicit V0 exclusions.
-- `docs/ARCHITECTURE.md` — smallest useful core and future adapter boundary.
+- `docs/ARCHITECTURE.md` — smallest useful core and adapter boundary.
 - `docs/RULE-CATALOG.md` — V0 deterministic rule semantics.
 - `docs/SCORING.md` — transparent coverage-based maturity model.
 - `docs/CORE.md` — implemented deterministic engine contract and limitations.
 - `docs/DOGFOOD.md` — Phase 9 six-repository evidence plan.
+- `docs/GITHUB-ACTION.md` — Phase 9 Action adapter and authority boundary.
 - `adr/` — architecture decisions for deterministic-first, context-aware analysis.
 - `rules/catalog.yaml` — machine-readable V0 rule catalog.
 - `schemas/scan-result.schema.json` — normalized result contract.
 - `fixtures/` — positive and negative architecture cases.
 - `src/iaap_guard/` — deterministic core and CLI.
 - `tests/` — frozen fixture and engine-invariant tests.
+- `action.yml` — thin GitHub Action dogfood adapter.
 
 ## Current status
 
-**PHASE 8 — IaaP Guard Deterministic Core: IN PROGRESS**
+**PHASE 8 — Deterministic Core: COMPLETE**  
+**PHASE 9 — Dogfood POC: IN PROGRESS**
 
-The scanner core is being validated against the frozen Phase 8 contract. GitHub Action dogfood and GitHub App webhook/runtime infrastructure remain intentionally out of scope until this core is proven.
+The current Phase 9 objective is to prove the Action and deterministic engine against the actual six-repository portfolio before building the GitHub App webhook/check-run runtime.

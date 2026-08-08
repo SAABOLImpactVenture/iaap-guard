@@ -1,4 +1,4 @@
-name: Phase 8 deterministic core validation
+name: Phase 9 action and deterministic core validation
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  validate-core:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -21,3 +21,46 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-ci.txt
       - run: make validate
+
+  dogfood-action:
+    needs: validate-core
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Run IaaP Guard against itself
+        id: guard
+        uses: ./
+        with:
+          fail-on-failure: 'false'
+          output: artifacts/iaap-guard/self-scan.json
+      - name: Verify action evidence contract
+        env:
+          RESULT_PATH: ${{ steps.guard.outputs.result-path }}
+          GUARD_CONCLUSION: ${{ steps.guard.outputs.conclusion }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          result = json.loads(Path(os.environ['RESULT_PATH']).read_text(encoding='utf-8'))
+          assert result['schemaVersion'] == 'scan-result/v1'
+          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.1'
+          assert result['scoringModelVersion'] == 'coverage/v1'
+          assert result['repository']['name'] == os.environ['GITHUB_REPOSITORY']
+          assert result['revision']['sha'] == os.environ['GITHUB_SHA']
+          assert result['conclusion'] == os.environ['GUARD_CONCLUSION']
+          assert not any(f['path'].startswith('fixtures/') and f['result'] == 'FAIL' for f in result['findings'])
+          e001 = next(item for item in result['ruleResults'] if item['ruleId'] == 'IAP-E001')
+          assert e001['result'] == 'NOT_APPLICABLE'
+          assert not any(f['ruleId'] == 'IAP-E001' for f in result['findings'])
+          print(f"verified self-scan: conclusion={result['conclusion']} score={result['overallScore']} findings={len(result['findings'])}")
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: iaap-guard-self-scan
+          path: artifacts/iaap-guard/self-scan.json
+          if-no-files-found: error
