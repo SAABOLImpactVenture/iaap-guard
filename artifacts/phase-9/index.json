@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "phase9-evidence-index/v1",
+  "artifacts": [
+    "portfolio-baseline.json",
+    "repository-results/ai-powered-infrastructure-as-a-product.json",
+    "repository-results/backstage-infrastructure-product-storefront-poc.json",
+    "repository-results/crossplane-multicloud-seed-poc.json",
+    "repository-results/multicloud-foundation-product-poc.json",
+    "repository-results/composite-ai-infrastructure-product-poc.json",
+    "repository-results/multicloud-foundation-poc-integration.json",
+    "expected-vs-actual.json",
+    "false-positive-analysis.json",
+    "mutation-matrix.json",
+    "repeatability.json",
+    "dogfood-scorecard.json"
+  ],
+  "exitGate": "PASS"
+}
