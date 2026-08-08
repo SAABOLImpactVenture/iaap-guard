@@ -44,6 +44,15 @@ class DeterministicCoreTests(unittest.TestCase):
             scan_path(root, repository="untrusted", revision=REVISION)
             self.assertFalse(sentinel.exists())
 
+    def test_repository_scan_does_not_promote_negative_fixtures_to_live_architecture(self):
+        result = scan_path(ROOT, repository="iaap-guard", revision=REVISION)
+        fixture_failures = [
+            finding
+            for finding in result["findings"]
+            if finding["result"] == "FAIL" and finding["path"].startswith("fixtures/")
+        ]
+        self.assertEqual(fixture_failures, [])
+
     def test_experimental_warning_does_not_affect_score_or_conclusion(self):
         dimension_scores, overall, conclusion = score_results(
             [
