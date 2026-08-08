@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "phase9-expected-vs-actual/v1",
+  "expectation": "Accepted known-good portfolio baselines have no unexplained FAIL or WARNING findings under iaap-guard/v0.1.2.",
+  "repositories": [
+    {"repository":"SAABOLImpactVenture/ai-powered-infrastructure-as-a-product","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true},
+    {"repository":"SAABOLImpactVenture/backstage-infrastructure-product-storefront-poc","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true},
+    {"repository":"SAABOLImpactVenture/crossplane-multicloud-seed-poc","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true},
+    {"repository":"SAABOLImpactVenture/multicloud-foundation-product-poc","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true},
+    {"repository":"SAABOLImpactVenture/composite-ai-infrastructure-product-poc","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true},
+    {"repository":"SAABOLImpactVenture/multicloud-foundation-poc-integration","expected":{"conclusion":"success","overallScore":100,"findings":0},"actual":{"conclusion":"success","overallScore":100,"findings":0},"match":true}
+  ],
+  "summary": {"matched": 6, "total": 6}
+}
