@@ -3,9 +3,9 @@ Transform: AWS::Serverless-2016-10-31
 Description: Minimal stateless IaaP Guard public GitHub App beta runtime.
 
 Parameters:
-  GitHubAppClientId:
-    Type: String
-    Description: GitHub App client ID used as the JWT issuer.
+  GitHubAppId:
+    Type: Number
+    Description: Numeric GitHub App ID used as the JWT issuer.
   GitHubPrivateKeySecretArn:
     Type: String
     Description: AWS Secrets Manager ARN containing the GitHub App PEM private key as SecretString.
@@ -29,8 +29,8 @@ Resources:
         Size: 1024
       Environment:
         Variables:
-          IAAP_GUARD_GITHUB_CLIENT_ID:
-            Ref: GitHubAppClientId
+          IAAP_GUARD_GITHUB_APP_ID:
+            Ref: GitHubAppId
           IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN:
             Ref: GitHubPrivateKeySecretArn
           IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN:
