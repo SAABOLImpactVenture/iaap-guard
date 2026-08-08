@@ -104,14 +104,15 @@ class Phase10GitHubAppTests(unittest.TestCase):
             serialization.PrivateFormat.PKCS8,
             serialization.NoEncryption(),
         ).decode("utf-8")
-        token = create_app_jwt("Iv1.phase10", pem, now=1_000_000)
+        token = create_app_jwt(4529329, pem, now=1_000_000)
         claims = jwt.decode(
             token,
             private_key.public_key(),
             algorithms=["RS256"],
             options={"verify_exp": False, "verify_iat": False},
         )
-        self.assertEqual(claims["iss"], "Iv1.phase10")
+        self.assertEqual(claims["iss"], 4529329)
+        self.assertIsInstance(claims["iss"], int)
         self.assertEqual(claims["iat"], 999_940)
         self.assertEqual(claims["exp"], 1_000_540)
         self.assertLessEqual(claims["exp"] - 1_000_000, 600)
@@ -172,7 +173,7 @@ class Phase10GitHubAppTests(unittest.TestCase):
             "pull_request",
             payload,
             api=api,
-            secrets=AppSecrets("Iv1.phase10", pem, "secret"),
+            secrets=AppSecrets(4529329, pem, "secret"),
         )
         self.assertTrue(result["handled"])
         self.assertEqual(result["conclusion"], "success")
@@ -213,7 +214,7 @@ class Phase10GitHubAppTests(unittest.TestCase):
             "pull_request",
             payload,
             api=api,
-            secrets=AppSecrets("Iv1.phase10", pem, "secret"),
+            secrets=AppSecrets(4529329, pem, "secret"),
         )
         self.assertTrue(result["handled"])
         self.assertEqual(result["repository"], "example/product")
@@ -293,7 +294,6 @@ class Phase10GitHubAppTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "IAAP_GUARD_GITHUB_CLIENT_ID": "Iv1.test",
                 "IAAP_GUARD_GITHUB_PRIVATE_KEY": "not-used-for-invalid-signature",
                 "IAAP_GUARD_GITHUB_WEBHOOK_SECRET": "secret",
             },

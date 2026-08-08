@@ -41,6 +41,9 @@ class Phase10ContractTests(unittest.TestCase):
     def test_lambda_template_has_public_webhook_but_narrow_aws_authority(self):
         text = (ROOT / "deploy/aws-lambda/template.yaml").read_text(encoding="utf-8")
         document = yaml.safe_load(text)
+        self.assertEqual(document["Parameters"]["GitHubAppId"]["Type"], "Number")
+        self.assertNotIn("GitHubAppClientId", document["Parameters"])
+
         function = document["Resources"]["GuardFunction"]["Properties"]
         self.assertEqual(function["Handler"], "lambda_function.lambda_handler")
         self.assertEqual(function["Runtime"], "python3.12")
@@ -48,7 +51,8 @@ class Phase10ContractTests(unittest.TestCase):
         self.assertEqual(function["FunctionUrlConfig"]["InvokeMode"], "BUFFERED")
 
         environment = function["Environment"]["Variables"]
-        self.assertIn("IAAP_GUARD_GITHUB_CLIENT_ID", environment)
+        self.assertIn("IAAP_GUARD_GITHUB_APP_ID", environment)
+        self.assertNotIn("IAAP_GUARD_GITHUB_CLIENT_ID", environment)
         self.assertIn("IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN", environment)
         self.assertIn("IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN", environment)
         self.assertNotIn("IAAP_GUARD_GITHUB_PRIVATE_KEY", environment)
@@ -68,6 +72,10 @@ class Phase10ContractTests(unittest.TestCase):
             requirements,
             ["PyYAML==6.0.2", "PyJWT==2.13.0", "cryptography==49.0.0"],
         )
+
+    def test_sam_builder_uses_runtime_dependency_entrypoint(self):
+        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(requirements, ["-r requirements-app.txt"])
 
 
 if __name__ == "__main__":

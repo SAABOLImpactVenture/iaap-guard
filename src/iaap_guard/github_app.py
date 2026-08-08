@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import io
@@ -15,7 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
-import jwt
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from .loader import SUPPORTED_SUFFIXES
 from .scanner import scan_path
@@ -53,7 +55,7 @@ class PullRequestTarget:
 
 @dataclass(frozen=True)
 class AppSecrets:
-    client_id: str
+    app_id: int
     private_key: str
     webhook_secret: str
 
@@ -65,13 +67,27 @@ def verify_webhook_signature(payload: bytes, secret: str, signature: str | None)
     return hmac.compare_digest(expected, signature)
 
 
-def create_app_jwt(client_id: str, private_key: str, now: int | None = None) -> str:
+def _base64url_json(value: dict[str, Any]) -> bytes:
+    raw = json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).rstrip(b"=")
+
+
+def create_app_jwt(app_id: int, private_key: str, now: int | None = None) -> str:
+    if isinstance(app_id, bool) or not isinstance(app_id, int) or app_id <= 0:
+        raise ValueError("GitHub App ID must be a positive integer")
     issued = int(time.time() if now is None else now)
-    return jwt.encode(
-        {"iat": issued - 60, "exp": issued + 540, "iss": client_id},
-        private_key,
-        algorithm="RS256",
-    )
+    header = _base64url_json({"alg": "RS256", "typ": "JWT"})
+    payload = _base64url_json({"iat": issued - 60, "exp": issued + 540, "iss": app_id})
+    signing_input = header + b"." + payload
+    try:
+        key = serialization.load_pem_private_key(private_key.encode("utf-8"), password=None)
+    except (TypeError, ValueError) as exc:
+        raise GitHubAppError("GitHub App private key is not a valid PEM private key") from exc
+    if not isinstance(key, rsa.RSAPrivateKey):
+        raise GitHubAppError("GitHub App private key must be RSA for RS256")
+    signature = key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
+    encoded_signature = base64.urlsafe_b64encode(signature).rstrip(b"=")
+    return b".".join((header, payload, encoded_signature)).decode("ascii")
 
 
 def is_relevant_path(filename: str) -> bool:
@@ -410,7 +426,7 @@ def target_from_rerequest(payload: dict[str, Any]) -> PullRequestTarget | None:
 
 
 def evaluate_target(api: GitHubApi, secrets: AppSecrets, target: PullRequestTarget) -> dict[str, Any]:
-    app_jwt = create_app_jwt(secrets.client_id, secrets.private_key)
+    app_jwt = create_app_jwt(secrets.app_id, secrets.private_key)
     token = api.installation_token(app_jwt, target.installation_id, target.repository_id)
     changed_files = api.pull_request_files(token, target.repository, target.pull_number)
     relevant = [name for name in changed_files if is_relevant_path(name)]

@@ -31,11 +31,17 @@ def _load_secret(direct_env: str, arn_env: str) -> str:
 
 
 def _load_app_secrets() -> AppSecrets:
-    client_id = os.environ.get("IAAP_GUARD_GITHUB_CLIENT_ID", "").strip()
-    if not client_id:
-        raise RuntimeError("IAAP_GUARD_GITHUB_CLIENT_ID is required")
+    app_id_raw = os.environ.get("IAAP_GUARD_GITHUB_APP_ID", "").strip()
+    if not app_id_raw:
+        raise RuntimeError("IAAP_GUARD_GITHUB_APP_ID is required")
+    try:
+        app_id = int(app_id_raw)
+    except ValueError as exc:
+        raise RuntimeError("IAAP_GUARD_GITHUB_APP_ID must be the numeric GitHub App ID") from exc
+    if app_id <= 0:
+        raise RuntimeError("IAAP_GUARD_GITHUB_APP_ID must be a positive integer")
     return AppSecrets(
-        client_id=client_id,
+        app_id=app_id,
         private_key=_load_secret("IAAP_GUARD_GITHUB_PRIVATE_KEY", "IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN"),
         webhook_secret=_load_secret("IAAP_GUARD_GITHUB_WEBHOOK_SECRET", "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN"),
     )
@@ -79,10 +85,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # no
     try:
         headers = _headers(event)
         raw_body = _body_bytes(event)
-        secrets = _load_app_secrets()
-        if not verify_webhook_signature(raw_body, secrets.webhook_secret, headers.get("x-hub-signature-256")):
+        webhook_secret = _load_secret(
+            "IAAP_GUARD_GITHUB_WEBHOOK_SECRET",
+            "IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN",
+        )
+        if not verify_webhook_signature(raw_body, webhook_secret, headers.get("x-hub-signature-256")):
             return _response(401, {"error": "invalid_webhook_signature"})
 
+        secrets = _load_app_secrets()
         event_name = headers.get("x-github-event")
         delivery = headers.get("x-github-delivery")
         if not event_name:
