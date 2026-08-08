@@ -48,7 +48,7 @@ jobs:
 
           result = json.loads(Path(os.environ['RESULT_PATH']).read_text(encoding='utf-8'))
           assert result['schemaVersion'] == 'scan-result/v1'
-          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.1'
+          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.2'
           assert result['scoringModelVersion'] == 'coverage/v1'
           assert result['repository']['name'] == os.environ['GITHUB_REPOSITORY']
           assert result['revision']['sha'] == os.environ['GITHUB_SHA']

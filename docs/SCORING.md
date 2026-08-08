@@ -80,7 +80,7 @@ A high score means the applicable V0 IaaP controls were demonstrably satisfied. 
 
 Every result must include:
 
-- `ruleCatalogVersion`, initially `iaap-guard/v0.1.0`;
-- `scoringModelVersion`, initially `coverage/v1`.
+- `ruleCatalogVersion`, currently `iaap-guard/v0.1.2`;
+- `scoringModelVersion`, currently `coverage/v1`.
 
 A result without both versions is not reproducible evidence.

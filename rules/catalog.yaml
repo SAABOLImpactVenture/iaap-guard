@@ -1,4 +1,4 @@
-catalogVersion: iaap-guard/v0.1.1
+catalogVersion: iaap-guard/v0.1.2
 scoringModelVersion: coverage/v1
 resultSemantics:
   PASS: Applicable deterministic control has positive evidence.
@@ -119,13 +119,13 @@ rules:
   - id: IAP-E001
     title: Product implementation lacks status evidence or lifecycle path
     dimension: Evidence Readiness
-    appliesTo: [consumer-contract, control-plane-implementation]
+    appliesTo: [control-plane-implementation]
     violationResult: WARNING
     scoring: true
     experimental: false
     principle: Evidence first
-    evidenceRequirement: Product-bearing scope has no recognizable machine-observable status, reconciliation-result, teardown, or lifecycle evidence path. Evidence-only tooling or validation repositories are not sufficient to make this rule applicable.
-    recommendation: Add a machine-observable lifecycle and evidence path appropriate to the product architecture.
+    evidenceRequirement: Infrastructure product implementation has no recognizable machine-observable status, reconciliation-result, teardown, or lifecycle evidence path. Consumer contracts, storefronts, AI-assistance repositories, and evidence-only tooling do not make this rule applicable unless they also contain control-plane implementation.
+    recommendation: Add a machine-observable lifecycle and evidence path appropriate to the product implementation.
 
   - id: IAP-CX01
     title: Possible multiple authoritative reconcilers
