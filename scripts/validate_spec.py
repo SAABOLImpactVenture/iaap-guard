@@ -26,7 +26,7 @@ def validate_machine_readable_files() -> None:
     expected = load_yaml(EXPECTED)
     result_schema = json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))
 
-    if catalog.get("catalogVersion") != "iaap-guard/v0.1.1":
+    if catalog.get("catalogVersion") != "iaap-guard/v0.1.2":
         fail("unexpected rule catalog version")
     if catalog.get("scoringModelVersion") != "coverage/v1":
         fail("unexpected scoring model version")
