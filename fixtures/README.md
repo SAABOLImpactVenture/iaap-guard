@@ -11,6 +11,7 @@ Positive fixtures prove that IaaP Guard is context-aware and does not fail merel
 - `good/product-contract.yaml` — narrow product contract with accountable ownership.
 - `good/providerconfig-behind-implementation.yaml` — ProviderConfig exists behind a Crossplane Composition and is not consumer-selectable.
 - `good/ai-denylist.json` — dangerous tools appear only in a deny-list; human approval and proposal-only authority remain intact.
+- `good/bootstrap-no-product.yaml` — a bounded bootstrap repo is not penalized for intentionally owning no consumer product abstraction.
 
 ## Negative fixtures
 
@@ -20,6 +21,8 @@ Positive fixtures prove that IaaP Guard is context-aware and does not fail merel
 - `negative/ai-apply-authority.json` -> `IAP-A001 FAIL`
 - `negative/consumer-lifecycle-policy.yaml` -> `IAP-P002 FAIL`
 - `negative/missing-owner.yaml` -> `IAP-P004 WARNING`
+- `negative/no-product-abstraction.yaml` -> `IAP-P003 WARNING`
+- `negative/missing-validation.yaml` -> `IAP-G001 WARNING`
 - `negative/reconciler-conflict.yaml` -> `IAP-CX01 WARNING` (experimental, non-scoring)
 - `negative/missing-approval.json` -> `IAP-A002 FAIL`
 - `negative/missing-evidence.yaml` -> `IAP-E001 WARNING`
