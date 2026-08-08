@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Minimal stateless IaaP Guard public GitHub App beta runtime.
+
+Parameters:
+  GitHubAppClientId:
+    Type: String
+    Description: GitHub App client ID used as the JWT issuer.
+  GitHubPrivateKeySecretArn:
+    Type: String
+    Description: AWS Secrets Manager ARN containing the GitHub App PEM private key as SecretString.
+  GitHubWebhookSecretArn:
+    Type: String
+    Description: AWS Secrets Manager ARN containing the GitHub App webhook secret as SecretString.
+
+Resources:
+  GuardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Stateless webhook adapter around the deterministic IaaP Guard core.
+      CodeUri: ../../
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 60
+      EphemeralStorage:
+        Size: 1024
+      Environment:
+        Variables:
+          IAAP_GUARD_GITHUB_CLIENT_ID:
+            Ref: GitHubAppClientId
+          IAAP_GUARD_GITHUB_PRIVATE_KEY_SECRET_ARN:
+            Ref: GitHubPrivateKeySecretArn
+          IAAP_GUARD_GITHUB_WEBHOOK_SECRET_ARN:
+            Ref: GitHubWebhookSecretArn
+          IAAP_GUARD_GITHUB_API_URL: https://api.github.com
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Sid: ReadOnlyGitHubAppSecrets
+              Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - Ref: GitHubPrivateKeySecretArn
+                - Ref: GitHubWebhookSecretArn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: BUFFERED
+
+Outputs:
+  WebhookUrl:
+    Description: Public HTTPS endpoint to configure as the GitHub App webhook URL.
+    Value:
+      Fn::GetAtt:
+        - GuardFunctionUrl
+        - FunctionUrl

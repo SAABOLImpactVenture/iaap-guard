@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "iaap-guard-github-app/v0",
+  "visibility": "public-installable",
+  "checkName": "IaaP Guard / Architecture",
+  "repositoryPermissions": {
+    "metadata": "read",
+    "contents": "read",
+    "pull_requests": "read",
+    "checks": "write"
+  },
+  "events": {
+    "pull_request": ["opened", "synchronize", "reopened", "ready_for_review"],
+    "check_run": ["rerequested"]
+  },
+  "installationToken": {
+    "scopeToTriggeringRepository": true,
+    "permissions": {
+      "contents": "read",
+      "pull_requests": "read",
+      "checks": "write"
+    }
+  },
+  "forbiddenPermissions": [
+    "actions",
+    "administration",
+    "deployments",
+    "issues",
+    "members",
+    "secrets",
+    "workflows",
+    "contents:write",
+    "pull_requests:write"
+  ],
+  "customerInfrastructureCredentialsRequired": false,
+  "personalAccessTokenRequired": false
+}
