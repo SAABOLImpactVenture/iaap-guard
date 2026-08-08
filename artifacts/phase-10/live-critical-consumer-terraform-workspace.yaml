@@ -1,0 +1,30 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: applicationenvironments.platform.example.org
+spec:
+  group: platform.example.org
+  names:
+    kind: ApplicationEnvironment
+    plural: applicationenvironments
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [cloud, region, owner, terraformWorkspace]
+              properties:
+                cloud:
+                  type: string
+                region:
+                  type: string
+                owner:
+                  type: string
+                terraformWorkspace:
+                  type: string
+                  description: Consumer-selected Terraform Enterprise workspace.
