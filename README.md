@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/showcase/guard-hero.svg" alt="IaaP Guard — executable Infrastructure-as-a-Product architecture review" width="1100"/>
+</p>
+
 # IaaP Guard
 
 > **IaaS is what you buy. Infrastructure-as-a-Product is what you build. IaaP Guard makes sure you keep building it that way.**
@@ -24,6 +28,37 @@ Coverage-based maturity score
 JSON + human-readable result
 ```
 
+### Architecture at a glance
+
+```mermaid
+flowchart LR
+  REPO[Repository / PR files] --> CLASS[Component classifier]
+  CLASS --> PARSE[Safe structured parsers]
+  PARSE --> RULES[Versioned IaaP rule catalog]
+  RULES --> FIND[Normalized findings]
+  FIND --> SCORE[coverage/v1 score]
+  SCORE --> RESULT[JSON + human-readable result]
+  RESULT --> CLI[CLI]
+  RESULT --> ACTION[GitHub Action]
+  RESULT --> APP[GitHub App / Checks]
+
+  classDef input fill:#0D2438,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC
+  classDef classifier fill:#12304A,stroke:#22D3EE,stroke-width:2px,color:#F8FAFC
+  classDef governance fill:#3A2A0D,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC
+  classDef rules fill:#123A24,stroke:#22C55E,stroke-width:3px,color:#F8FAFC
+  classDef evidence fill:#3A1530,stroke:#EC4899,stroke-width:2px,color:#F8FAFC
+  classDef scoring fill:#18152D,stroke:#8B5CF6,stroke-width:2px,color:#F8FAFC
+  classDef adapter fill:#102D55,stroke:#3B82F6,stroke-width:2px,color:#F8FAFC
+  class REPO input
+  class CLASS classifier
+  class PARSE governance
+  class RULES rules
+  class FIND,RESULT evidence
+  class SCORE scoring
+  class CLI,ACTION,APP adapter
+  linkStyle default stroke:#7DD3FC,stroke-width:2px
+```
+
 Adapters remain thin around the same core:
 
 ```text
@@ -34,6 +69,10 @@ IaaP Guard Core
 ```
 
 The adapter is not the product. The durable product IP is the system of IaaP product knowledge, rules, evidence, compatibility, and operating model.
+
+<p align="center">
+  <img src="docs/assets/showcase/guard-rule-system.svg" alt="IaaP Guard component classifier and deterministic rule system" width="1050"/>
+</p>
 
 ## Deterministic core
 
@@ -108,6 +147,35 @@ Existing deterministic IaaP Guard core
 scan-result/v1
     ↓
 IaaP Guard / Architecture Check Run
+```
+
+### Public App event path
+
+```mermaid
+flowchart TB
+  EVENT[GitHub PR event] --> WEBHOOK[Public GitHub App webhook]
+  WEBHOOK --> SIG[X-Hub-Signature-256 verification]
+  SIG --> TOKEN[Short-lived repository-scoped token]
+  TOKEN --> SNAP[Immutable PR-head snapshot]
+  SNAP --> CORE[Deterministic IaaP Guard core]
+  CORE --> SCAN[scan-result/v1]
+  SCAN --> CHECK[IaaP Guard / Architecture Check]
+
+  classDef event fill:#0D2438,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC
+  classDef governance fill:#3A2A0D,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC
+  classDef authority fill:#47270F,stroke:#FB923C,stroke-width:2px,color:#F8FAFC
+  classDef source fill:#1F2937,stroke:#94A3B8,stroke-width:2px,color:#F8FAFC
+  classDef rules fill:#123A24,stroke:#22C55E,stroke-width:3px,color:#F8FAFC
+  classDef evidence fill:#3A1530,stroke:#EC4899,stroke-width:2px,color:#F8FAFC
+  classDef adapter fill:#102D55,stroke:#3B82F6,stroke-width:2px,color:#F8FAFC
+  class EVENT event
+  class WEBHOOK,SIG governance
+  class TOKEN authority
+  class SNAP source
+  class CORE rules
+  class SCAN evidence
+  class CHECK adapter
+  linkStyle default stroke:#7DD3FC,stroke-width:2px
 ```
 
 The initial hosting implementation uses **AWS Lambda + Function URL** because the core is already Python and the beta does not require a persistent database. Hosting remains replaceable; it is not part of the rule engine or consumer contract.
