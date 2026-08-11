@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import base64
-import shutil
 import tempfile
 import urllib.parse
 from pathlib import Path
 from typing import Any, Callable
 
+from .loader import load_artifacts
 from .product import MAX_PRODUCT_REPOSITORIES, build_product_assessment, load_product_manifest
 from .product_planning import build_product_planning_report
-from .product_relationships import apply_relationship_evidence
+from .product_relationships import RELATIONSHIP_RULE_IDS, apply_relationship_evidence
 from .scanner import scan_path
 
 PRODUCT_MANIFEST_PATH = ".iaap/product.yaml"
+MAX_RELATIONSHIP_BUNDLE_BYTES = 20_000_000
+RELATIONSHIP_CONTEXTS = {"consumer-contract", "experience"}
 
 
 def _encoded_repo(repository: str) -> str:
@@ -134,10 +136,56 @@ def _member_destination(bundle: Path, repository: str) -> Path:
     return bundle / "members" / owner / name
 
 
-def _copy_member(bundle: Path, repository: str, root: Path) -> None:
+def _copy_relationship_artifacts(
+    bundle: Path,
+    repository: str,
+    root: Path,
+    used_bytes: int,
+) -> tuple[int, bool]:
+    """Copy only artifacts that can participate in the V1 relationship rule.
+
+    Member repository scans still operate on the full extracted snapshot. The
+    shared bundle is a separate bounded derivative containing only classified
+    consumer-contract/experience artifacts needed by IAP-C001.
+    """
+
     destination = _member_destination(bundle, repository)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(root, destination, dirs_exist_ok=True)
+    for artifact in load_artifacts(root):
+        if not RELATIONSHIP_CONTEXTS.intersection(artifact.contexts):
+            continue
+        raw = artifact.text.encode("utf-8")
+        if used_bytes + len(raw) > MAX_RELATIONSHIP_BUNDLE_BYTES:
+            return used_bytes, False
+        target = destination / artifact.relative_path
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+        except OSError:
+            return used_bytes, False
+        used_bytes += len(raw)
+    return used_bytes, True
+
+
+def _mark_relationship_incomplete(assessment: dict[str, Any], reason: str) -> None:
+    assessment["relationshipEvaluation"] = {
+        "status": "incomplete",
+        "rules": sorted(RELATIONSHIP_RULE_IDS),
+        "reason": reason,
+    }
+    assessment["findings"].append(
+        {
+            "ruleId": "IAP-PR002",
+            "result": "FAIL",
+            "dimension": "Evidence Readiness",
+            "repository": "@product",
+            "path": ".iaap/product.yaml",
+            "evidence": reason,
+            "recommendation": "Reduce or split the registered product relationship evidence so the bounded product compatibility evaluation can complete.",
+            "scoring": False,
+            "experimental": False,
+        }
+    )
+    assessment["conclusion"] = "incomplete"
 
 
 def evaluate_trusted_product_scope(
@@ -150,18 +198,7 @@ def evaluate_trusted_product_scope(
     trigger_result: dict[str, Any],
     extract_archive: Callable[[bytes, Path], Path],
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
-    """Evaluate one logical product using explicitly and reciprocally registered evidence.
-
-    V1 safety boundaries:
-    - membership is read only from trusted default branches, never PR heads;
-    - every automatically federated member must carry the same product membership;
-    - the triggering repository must be registered;
-    - related repositories must share the same owner and visibility;
-    - every related token is scoped to exactly one repository and contents:read;
-    - inaccessible or non-reciprocal required members become INCOMPLETE;
-    - related repositories are scanned at immutable default-branch SHAs;
-    - cross-repo relationship rules run only after members are safely assembled.
-    """
+    """Evaluate one logical product using explicitly and reciprocally registered evidence."""
 
     manifest, trigger_metadata = _trusted_manifest(api, trigger_token, trigger_repository)
     if manifest is None:
@@ -181,9 +218,18 @@ def evaluate_trusted_product_scope(
         trigger_visibility = "private" if trigger_metadata.get("private") else "public"
 
     results = [trigger_result]
+    related_content_read = False
+    relationship_bundle_complete = True
+    relationship_bundle_bytes = 0
+
     with tempfile.TemporaryDirectory(prefix="iaap-guard-product-bundle-") as bundle_tmp:
         bundle = Path(bundle_tmp)
-        _copy_member(bundle, trigger_repository, trigger_root)
+        relationship_bundle_bytes, relationship_bundle_complete = _copy_relationship_artifacts(
+            bundle,
+            trigger_repository,
+            trigger_root,
+            relationship_bundle_bytes,
+        )
 
         for entry in repositories:
             repository = entry["name"]
@@ -194,10 +240,8 @@ def evaluate_trusted_product_scope(
             try:
                 token = _related_repository_token(api, app_jwt, repository)
                 related_manifest, metadata = _trusted_manifest(api, token, repository)
+                related_content_read = True
                 if related_manifest is None or _membership_signature(related_manifest) != expected_membership:
-                    # A triggering repository cannot unilaterally enroll another
-                    # repository into product-level evidence sharing. The related
-                    # repository must reciprocally declare the same product scope.
                     continue
                 visibility = metadata.get("visibility")
                 if not isinstance(visibility, str):
@@ -214,21 +258,47 @@ def evaluate_trusted_product_scope(
                         revision=sha,
                         ref=f"refs/heads/{default_branch}",
                     )
-                    _copy_member(bundle, repository, root)
+                    if relationship_bundle_complete:
+                        relationship_bundle_bytes, relationship_bundle_complete = _copy_relationship_artifacts(
+                            bundle,
+                            repository,
+                            root,
+                            relationship_bundle_bytes,
+                        )
                 results.append(result)
             except RuntimeError:
-                # Fail closed at the product layer. Required members become
-                # INCOMPLETE; optional members remain visible as absent evidence.
                 continue
 
         assessment = build_product_assessment(manifest, results)
-        relationship_scan = scan_path(
-            bundle,
-            repository=f"product:{manifest['product']['id']}",
-            revision=assessment["evidenceRevision"][:40],
-            ref="iaap-product/v1",
-        )
-        assessment = apply_relationship_evidence(assessment, relationship_scan)
+        assessment["acquisition"] = {
+            "mode": "trusted-github-federation",
+            "relatedRepositoryContentRead": related_content_read,
+            "reciprocalMembershipRequired": True,
+        }
+
+        if not assessment["completeness"]["complete"]:
+            _mark_relationship_incomplete(
+                assessment,
+                "Cross-repository compatibility could not be fully evaluated because required product member evidence is missing.",
+            )
+        elif not relationship_bundle_complete:
+            _mark_relationship_incomplete(
+                assessment,
+                f"Cross-repository compatibility evidence exceeded the V1 bounded bundle limit of {MAX_RELATIONSHIP_BUNDLE_BYTES} bytes or could not be copied safely.",
+            )
+        else:
+            relationship_scan = scan_path(
+                bundle,
+                repository=f"product:{manifest['product']['id']}",
+                revision=assessment["evidenceRevision"][:40],
+                ref="iaap-product/v1",
+            )
+            assessment = apply_relationship_evidence(assessment, relationship_scan)
+            assessment["relationshipEvaluation"] = {
+                "status": "complete",
+                "rules": sorted(RELATIONSHIP_RULE_IDS),
+                "reason": None,
+            }
 
     plan = build_product_planning_report(assessment)
     return assessment, plan
