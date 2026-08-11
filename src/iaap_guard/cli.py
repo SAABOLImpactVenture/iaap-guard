@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .evidence import build_evidence_manifest, render_evidence_markdown
 from .planning import build_planning_report, render_planning_markdown
 from .product import build_product_assessment, load_product_manifest, load_scan_results, render_product_markdown
 from .product_planning import build_product_planning_report, render_product_planning_markdown
@@ -62,6 +63,19 @@ def build_parser() -> argparse.ArgumentParser:
     _add_scan_arguments(scan)
     scan.add_argument("--format", choices=("text", "json"), default="text")
 
+    evidence = subparsers.add_parser(
+        "evidence",
+        help="scan current state and assess deterministic evidence continuity against a prior scan result",
+    )
+    _add_scan_arguments(evidence)
+    evidence.add_argument("--baseline", type=Path, help="prior scan-result/v1 JSON evidence")
+    evidence.add_argument(
+        "--scan-output",
+        type=Path,
+        help="optionally retain the current scan-result/v1 JSON as a future continuity baseline",
+    )
+    evidence.add_argument("--format", choices=("markdown", "json"), default="markdown")
+
     plan = subparsers.add_parser(
         "plan",
         help="scan a repository and generate an evidence-traceable OKR improvement plan",
@@ -92,6 +106,13 @@ def _write_or_print(rendered: str, output: Path | None) -> None:
         output.write_text(rendered, encoding="utf-8")
     else:
         print(rendered, end="")
+
+
+def _load_json_object(path: Path) -> dict:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return value
 
 
 def main() -> int:
@@ -127,6 +148,18 @@ def main() -> int:
 
     if args.command == "scan":
         rendered = json.dumps(result, indent=2, sort_keys=False) + "\n" if args.format == "json" else render_text(result)
+        exit_code = 1 if result["conclusion"] == "failure" else 0
+    elif args.command == "evidence":
+        baseline = _load_json_object(args.baseline) if args.baseline else None
+        manifest = build_evidence_manifest(result, baseline)
+        if args.scan_output:
+            _write_or_print(json.dumps(result, indent=2, sort_keys=False) + "\n", args.scan_output)
+        rendered = (
+            json.dumps(manifest, indent=2, sort_keys=False) + "\n"
+            if args.format == "json"
+            else render_evidence_markdown(manifest)
+        )
+        exit_code = 0 if manifest["evidenceContinuity"]["status"] == "supported" and result["conclusion"] == "success" else 1
     else:
         report = build_planning_report(result, catalog_path=args.planning_catalog)
         rendered = (
@@ -134,9 +167,10 @@ def main() -> int:
             if args.format == "json"
             else render_planning_markdown(report)
         )
+        exit_code = 1 if result["conclusion"] == "failure" else 0
 
     _write_or_print(rendered, args.output)
-    return 1 if result["conclusion"] == "failure" else 0
+    return exit_code
 
 
 if __name__ == "__main__":
