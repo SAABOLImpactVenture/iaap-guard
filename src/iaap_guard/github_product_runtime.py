@@ -133,15 +133,16 @@ def handle_product_aware_event(
             revision=target.head_sha,
             ref=target.ref,
         )
+        product_scope = evaluate_trusted_product_scope(
+            api=api,
+            app_jwt=app_jwt,
+            trigger_token=trigger_token,
+            trigger_repository=target.repository,
+            trigger_root=root,
+            trigger_result=trigger_result,
+            extract_archive=_safe_extract_tarball,
+        )
 
-    product_scope = evaluate_trusted_product_scope(
-        api=api,
-        app_jwt=app_jwt,
-        trigger_token=trigger_token,
-        trigger_repository=target.repository,
-        trigger_result=trigger_result,
-        extract_archive=_safe_extract_tarball,
-    )
     if product_scope is None:
         return base
 
