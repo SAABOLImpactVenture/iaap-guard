@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .planning import build_planning_report, render_planning_markdown
 from .scanner import scan_path
 
 
@@ -36,17 +37,30 @@ def render_text(result: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _add_scan_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("target", type=Path)
+    parser.add_argument("--repository")
+    parser.add_argument("--revision", default="0" * 40)
+    parser.add_argument("--ref")
+    parser.add_argument("--catalog", type=Path)
+    parser.add_argument("--output", type=Path)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Deterministic Infrastructure-as-a-Product architecture guard")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
     scan = subparsers.add_parser("scan", help="scan a repository, directory, or fixture")
-    scan.add_argument("target", type=Path)
-    scan.add_argument("--repository")
-    scan.add_argument("--revision", default="0" * 40)
-    scan.add_argument("--ref")
-    scan.add_argument("--catalog", type=Path)
+    _add_scan_arguments(scan)
     scan.add_argument("--format", choices=("text", "json"), default="text")
-    scan.add_argument("--output", type=Path)
+
+    plan = subparsers.add_parser(
+        "plan",
+        help="scan a repository and generate an evidence-traceable OKR improvement plan",
+    )
+    _add_scan_arguments(plan)
+    plan.add_argument("--planning-catalog", type=Path)
+    plan.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
 
 
@@ -59,7 +73,17 @@ def main() -> int:
         ref=args.ref,
         catalog_path=args.catalog,
     )
-    rendered = json.dumps(result, indent=2, sort_keys=False) + "\n" if args.format == "json" else render_text(result)
+
+    if args.command == "scan":
+        rendered = json.dumps(result, indent=2, sort_keys=False) + "\n" if args.format == "json" else render_text(result)
+    else:
+        report = build_planning_report(result, catalog_path=args.planning_catalog)
+        rendered = (
+            json.dumps(report, indent=2, sort_keys=False) + "\n"
+            if args.format == "json"
+            else render_planning_markdown(report)
+        )
+
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
