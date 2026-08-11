@@ -69,6 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_scan_arguments(evidence)
     evidence.add_argument("--baseline", type=Path, help="prior scan-result/v1 JSON evidence")
+    evidence.add_argument(
+        "--scan-output",
+        type=Path,
+        help="optionally retain the current scan-result/v1 JSON as a future continuity baseline",
+    )
     evidence.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
     plan = subparsers.add_parser(
@@ -147,6 +152,8 @@ def main() -> int:
     elif args.command == "evidence":
         baseline = _load_json_object(args.baseline) if args.baseline else None
         manifest = build_evidence_manifest(result, baseline)
+        if args.scan_output:
+            _write_or_print(json.dumps(result, indent=2, sort_keys=False) + "\n", args.scan_output)
         rendered = (
             json.dumps(manifest, indent=2, sort_keys=False) + "\n"
             if args.format == "json"
