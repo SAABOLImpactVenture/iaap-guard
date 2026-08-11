@@ -69,7 +69,7 @@ class PlanningReportTests(unittest.TestCase):
         feature = epic["features"][0]
         story = feature["userStories"][0]
         self.assertTrue(story["candidate"])
-        self.assertIn("As a application team", story["statement"])
+        self.assertIn("As a platform consumer", story["statement"])
         self.assertTrue(story["acceptanceEvidence"])
         self.assertTrue(all(task["candidate"] for task in story["candidateTasks"]))
 
