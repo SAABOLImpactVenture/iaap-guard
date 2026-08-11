@@ -28,10 +28,16 @@ def _repository_metadata(api: Any, token: str, repository: str) -> dict[str, Any
     return response
 
 
-def _trusted_manifest(api: Any, token: str, repository: str) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+def _trusted_manifest(
+    api: Any,
+    token: str,
+    repository: str,
+    *,
+    metadata: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """Load product membership from a repository default branch, never PR head."""
 
-    metadata = _repository_metadata(api, token, repository)
+    metadata = metadata if metadata is not None else _repository_metadata(api, token, repository)
     default_branch = metadata.get("default_branch")
     if not isinstance(default_branch, str) or not default_branch:
         raise RuntimeError("repository metadata did not contain a default branch")
@@ -108,6 +114,13 @@ def _related_repository_token(api: Any, app_jwt: str, repository: str) -> str:
     if not isinstance(token, str) or not token:
         raise RuntimeError("related repository token response did not contain a token")
     return token
+
+
+def _visibility(metadata: dict[str, Any]) -> str:
+    value = metadata.get("visibility")
+    if isinstance(value, str):
+        return value
+    return "private" if metadata.get("private") else "public"
 
 
 def _default_revision(
@@ -213,9 +226,7 @@ def evaluate_trusted_product_scope(
 
     expected_membership = _membership_signature(manifest)
     trigger_owner = trigger_repository.split("/", 1)[0]
-    trigger_visibility = trigger_metadata.get("visibility")
-    if not isinstance(trigger_visibility, str):
-        trigger_visibility = "private" if trigger_metadata.get("private") else "public"
+    trigger_visibility = _visibility(trigger_metadata)
 
     results = [trigger_result]
     related_content_read = False
@@ -239,14 +250,20 @@ def evaluate_trusted_product_scope(
                 continue
             try:
                 token = _related_repository_token(api, app_jwt, repository)
-                related_manifest, metadata = _trusted_manifest(api, token, repository)
+                metadata = _repository_metadata(api, token, repository)
+                if _visibility(metadata) != trigger_visibility:
+                    # Do not read even the trusted product manifest across the
+                    # V1 visibility boundary. This prevents product federation
+                    # from becoming a configuration-probing side channel.
+                    continue
+                related_manifest, _ = _trusted_manifest(
+                    api,
+                    token,
+                    repository,
+                    metadata=metadata,
+                )
                 related_content_read = True
                 if related_manifest is None or _membership_signature(related_manifest) != expected_membership:
-                    continue
-                visibility = metadata.get("visibility")
-                if not isinstance(visibility, str):
-                    visibility = "private" if metadata.get("private") else "public"
-                if visibility != trigger_visibility:
                     continue
                 default_branch, sha = _default_revision(api, token, repository, metadata)
                 archive = api.repository_tarball(token, repository, sha)
@@ -266,7 +283,10 @@ def evaluate_trusted_product_scope(
                             relationship_bundle_bytes,
                         )
                 results.append(result)
-            except RuntimeError:
+            except (RuntimeError, ValueError):
+                # A malformed or inaccessible related member is unavailable
+                # product evidence; required members make the assessment
+                # INCOMPLETE instead of failing the triggering webhook.
                 continue
 
         assessment = build_product_assessment(manifest, results)
