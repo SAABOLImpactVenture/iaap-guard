@@ -18,7 +18,7 @@ CURRENT_REVISION = "2" * 40
 class EvidenceContinuityTests(unittest.TestCase):
     def _good_scan(self, revision: str = BASELINE_REVISION) -> dict:
         return scan_path(
-            ROOT / "fixtures/good/product-contract.yaml",
+            ROOT,
             repository="example/platform-product",
             revision=revision,
         )
