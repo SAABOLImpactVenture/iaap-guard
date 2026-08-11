@@ -1,8 +1,10 @@
-# Deterministic Core — Phase 8
+# Deterministic Core
 
 ## Purpose
 
-The deterministic core turns the Phase 8 product contract into executable architecture evaluation without introducing GitHub App infrastructure, cloud credentials, Kubernetes credentials, AI inference, or remediation authority.
+The deterministic core turns the IaaP Guard product contract into executable architecture evaluation and reconstructable evidence without introducing cloud credentials, Kubernetes credentials, AI inference, remediation authority, or a persistent customer database.
+
+The core now produces two related contracts:
 
 ```text
 files
@@ -18,11 +20,17 @@ rule results + findings
 coverage/v1 scoring
   ↓
 scan-result/v1
+  ↓
+evidence-manifest/v1
+  ↓
+continuity/v1
 ```
+
+`scan-result/v1` describes the current Guard-observed architecture state. `evidence-manifest/v1` can compare that state with a prior trustworthy Guard result and record whether the prior evidence remains supported within Guard's deterministic scope.
 
 ## Safety boundary
 
-The core reads files only. It does not:
+The core reads files and normalized Guard evidence only. It does not:
 
 - import scanned Python modules;
 - execute shell scripts;
@@ -31,11 +39,14 @@ The core reads files only. It does not:
 - call cloud APIs;
 - access GitHub APIs;
 - access repository secrets;
-- modify the scanned repository.
+- modify the scanned repository;
+- grant or revoke authorization;
+- approve exceptions or risk acceptance; or
+- decide deployment/disposition authority.
 
-Generated/output directories and common dependency/vendor directories are excluded from traversal. Files larger than the V0 bounded input size are skipped rather than executed or streamed to another service.
+Generated/output directories and common dependency/vendor directories are excluded from traversal. Files larger than the bounded input size are skipped rather than executed or streamed to another service.
 
-## V0 classification
+## Classification
 
 The classifier recognizes:
 
@@ -50,7 +61,7 @@ The classifier recognizes:
 
 Fixture metadata can explicitly override context only inside the repository's test fixtures. That allows a bad example to be evaluated as the architecture context it represents instead of being suppressed merely because it lives under `fixtures/`.
 
-## V0 rule implementation notes
+## Rule implementation notes
 
 ### IAP-P001 — implementation leakage
 
@@ -74,7 +85,7 @@ Requires deterministic evidence of self-approval, self-merge, explicit approval 
 
 ### IAP-C001 — contract compatibility
 
-Compares a recognizable canonical product schema with a recognizable storefront/order schema. V0 evaluates enum containment, min/max string constraints, and patterns. Without a deterministic pair, the rule is `NOT_APPLICABLE` rather than guessed.
+Compares a recognizable canonical product schema with a recognizable storefront/order schema. Guard evaluates deterministic compatibility evidence only; without a recognizable pair, the rule is `NOT_APPLICABLE` rather than guessed.
 
 ### IAP-P003 — product abstraction
 
@@ -94,7 +105,7 @@ Looks for machine-observable status structures and explicit reconciliation, tear
 
 ### IAP-CX01 — authoritative reconciler conflict
 
-V0 is deliberately conservative. It only evaluates when structured reconciliation ownership evidence exists. Technology coexistence alone does not produce a finding. This rule remains experimental and non-scoring.
+Guard is deliberately conservative. It only evaluates when structured reconciliation ownership evidence exists. Technology coexistence alone does not produce a finding. This rule remains experimental and non-scoring.
 
 ## Scoring
 
@@ -113,8 +124,70 @@ overall   = equal-weight mean of applicable dimension scores
 - no scoring FAIL and at least one scoring `WARNING` → `neutral`
 - otherwise → `success`
 
+These are point-in-time architecture conclusions. They do not state whether an infrastructure action is authorized to execute.
+
+## Evidence Continuity contract
+
+Evidence Continuity compares a prior normalized Guard result with a current normalized Guard result.
+
+The core can preserve:
+
+- baseline and current repository identity;
+- immutable revisions when supplied;
+- Guard/rule-catalog/scoring versions;
+- rule-state transitions;
+- introduced and resolved finding evidence;
+- deterministic evidence digests;
+- Guard-bounded materiality; and
+- bounded revalidation disposition.
+
+The normalized continuity states are:
+
+- `supported`
+- `review_required`
+- `not_established`
+
+### `supported`
+
+The current and baseline Guard evidence differ in revision or other non-material metadata, but Guard detects no rule/finding change that its continuity model classifies as material.
+
+This means **Guard can support continuity of its own evidence**, not that an external authorization remains valid.
+
+### `review_required`
+
+Guard detects a material rule/finding transition or evidence delta that means the prior Guard evidence should not be silently treated as still applicable.
+
+This is a decision-support signal. It does not choose the reviewer, approval authority, exception owner, or final disposition.
+
+### `not_established`
+
+Guard does not have a suitable prior result from which to establish continuity.
+
+## Deterministic evidence digest
+
+Evidence manifests use canonicalized normalized evidence to derive SHA-256 digests. The digest is intended to make evidence records comparable and tamper-evident within the Guard contract.
+
+A digest is **not** a digital authorization signature, legal attestation, or proof that an external system actually executed the described infrastructure action.
+
+## GitHub PR baseline semantics
+
+The core itself is transport-neutral: callers provide baseline/current normalized Guard results.
+
+The GitHub App adapter adds a trusted baseline rule:
+
+```text
+PR base SHA → deterministic scan → baseline scan-result/v1
+PR head SHA → deterministic scan → current scan-result/v1
+                                ↓
+                      evidence-manifest/v1
+```
+
+The PR head cannot choose the base SHA. GitHub pull-request state supplies it.
+
 ## Current limitations
 
-V0 intentionally does not attempt full semantic HCL parsing, organization-wide cross-repository relationship discovery, live reconciler discovery, compliance mapping, or AI-assisted inference. Those capabilities require evidence that they improve customer value enough to justify additional complexity.
+IaaP Guard intentionally does not attempt full semantic HCL parsing, live reconciler discovery, compliance determinations, legal authorization evaluation, autonomous exception handling, historical SaaS analytics, or AI-assisted verdicts.
 
-Phase 9 dogfood will determine which classifier/rule gaps are real before the rule engine expands.
+Multi-repository product scope is bounded by explicit reciprocal registration and narrow GitHub read authority. Repository-level Evidence Continuity currently compares Guard-observed base/head states; product-wide temporal continuity may evolve separately if customer value justifies the complexity.
+
+These limits preserve the product boundary: **deterministic architecture evidence first, accountable human governance above it.**
