@@ -104,6 +104,28 @@ PYTHONPATH=src python3 -m iaap_guard.cli scan . \
 
 Use `--format json` for the normalized machine-readable contract.
 
+## From architecture evidence to an improvement plan
+
+IaaP Guard does more than identify Infrastructure-as-a-Product architecture gaps. When deterministic findings exist, Guard can translate that evidence into a versioned, traceable **Improvement Plan**:
+
+```text
+Architecture Evidence → Objectives → Key Results → Epics → Features → Candidate User Stories → Candidate Tasks → Acceptance Evidence
+```
+
+Epics are explicitly mapped to measurable Key Results, and every proposed work item retains traceability back to the Guard rule and repository evidence that caused it. The planning layer therefore helps a team move from **“what is wrong?”** to **“what should we plan to improve?”** without disconnecting delivery work from the architecture evidence that justified it.
+
+The planning layer is intentionally advisory. IaaP Guard does **not** assign work, manage sprints, estimate capacity, autonomously create backlog items, or execute remediation. Candidate stories and tasks are a planning starting point for accountable teams, not execution commitments.
+
+Generate a Markdown plan locally:
+
+```bash
+PYTHONPATH=src python3 -m iaap_guard.cli plan . \
+  --repository example/platform-repo \
+  --revision 0123456789abcdef0123456789abcdef01234567
+```
+
+Use `--format json` for the normalized `planning-report/v1` contract. See [`docs/PLANNING-REPORT.md`](docs/PLANNING-REPORT.md) for the planning semantics and product boundary.
+
 ## Phase 9 GitHub Action
 
 Phase 9 proved a thin composite Action around the same deterministic engine across the six-repository IaaP portfolio.
@@ -193,6 +215,8 @@ The V0 App authority is frozen in `config/github-app-v0.json`:
 
 For each handled event, the installation token is narrowed to the **triggering repository** and discarded after the stateless invocation. The adapter publishes `IaaP Guard / Architecture` using the deterministic core conclusion: `success`, `neutral`, or `failure`.
 
+When the deterministic scan produces WARNING or FAIL findings, the current beta adapter also appends a compact **Improvement Plan** to the Check. PASS/no-finding and no-relevant-change results do not invent backlog work.
+
 See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check Run, and beta-limit contract.
 
 ## V0 principles
@@ -216,6 +240,7 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 - `docs/RULE-CATALOG.md` — V0 deterministic rule semantics.
 - `docs/SCORING.md` — transparent coverage-based maturity model.
 - `docs/CORE.md` — implemented deterministic engine contract and limitations.
+- `docs/PLANNING-REPORT.md` — OKR-to-backlog planning semantics and product boundary.
 - `docs/DOGFOOD.md` — Phase 9 six-repository evidence plan.
 - `docs/GITHUB-ACTION.md` — Phase 9 Action adapter and authority boundary.
 - `docs/GITHUB-APP-BETA.md` — Phase 10 public GitHub App beta contract and deployment guide.
@@ -223,16 +248,19 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 - `deploy/aws-lambda/template.yaml` — minimal stateless beta runtime deployment.
 - `adr/` — architecture decisions for deterministic-first, context-aware analysis and bounded distribution.
 - `rules/catalog.yaml` — machine-readable V0 rule catalog.
+- `planning/catalog.yaml` — versioned deterministic planning templates.
 - `schemas/scan-result.schema.json` — normalized result contract.
+- `schemas/planning-report.schema.json` — normalized improvement-plan contract.
 - `fixtures/` — positive and negative architecture cases.
 - `src/iaap_guard/` — deterministic core plus thin GitHub App adapter.
-- `tests/` — frozen fixture, engine-invariant, Phase 9 evidence, and Phase 10 adapter/security tests.
+- `tests/` — frozen fixture, engine-invariant, Phase 9 evidence, Phase 10 adapter/security, and planning-report tests.
 - `action.yml` — thin GitHub Action dogfood adapter.
 
 ## Current status
 
 **PHASE 8 — Deterministic Core: COMPLETE**  
 **PHASE 9 — Dogfood POC: COMPLETE**  
-**PHASE 10 — Public Installable Beta: IN PROGRESS**
+**PHASE 10 — Public Installable Beta: IN PROGRESS**  
+**PHASE 11 — Evidence-to-Planning Layer: COMPLETE**
 
-Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is now proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials.
+Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 adds the advisory `planning-report/v1` path that translates findings into measurable OKRs and candidate backlog structure while preserving Guard's non-execution boundary.
