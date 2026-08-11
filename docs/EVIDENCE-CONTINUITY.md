@@ -93,25 +93,27 @@ Those capabilities can be layered later through artifact attestations, signed pr
 
 ## CLI
 
-Create the first evidence anchor:
+Create the first evidence anchor and retain the current normalized scan as the next baseline:
 
 ```bash
 PYTHONPATH=src python3 -m iaap_guard.cli evidence . \
   --repository example/platform-product \
   --revision 1111111111111111111111111111111111111111 \
+  --scan-output prior-scan-result.json \
   --format json \
   --output baseline-evidence.json
 ```
 
-The first invocation reports `not_established` because there is no baseline. Retain the corresponding `scan-result/v1` JSON as the baseline input for a later comparison.
+The first invocation reports `not_established` because there is no baseline. `baseline-evidence.json` is the reconstructable evidence manifest; `prior-scan-result.json` retains the normalized `scan-result/v1` needed for the next comparison.
 
-Compare current state to a retained baseline scan result:
+Compare current state to the retained baseline scan result and retain the new scan for the following evaluation:
 
 ```bash
 PYTHONPATH=src python3 -m iaap_guard.cli evidence . \
   --repository example/platform-product \
   --revision 2222222222222222222222222222222222222222 \
   --baseline prior-scan-result.json \
+  --scan-output current-scan-result.json \
   --format markdown
 ```
 
