@@ -232,6 +232,16 @@ def build_product_assessment(
         "evidenceRevision": _manifest_digest(manifest, present_results),
         "ruleCatalogVersion": rule_version,
         "scoringModelVersion": scoring_version,
+        "acquisition": {
+            "mode": "provided-evidence",
+            "relatedRepositoryContentRead": False,
+            "reciprocalMembershipRequired": False,
+        },
+        "relationshipEvaluation": {
+            "status": "not-evaluated",
+            "rules": [],
+            "reason": "member scan-result/v1 evidence alone does not reconstruct cross-repository artifact relationships",
+        },
         "members": members,
         "completeness": {
             "registered": len(members),
@@ -245,8 +255,7 @@ def build_product_assessment(
         "conclusion": conclusion,
         "findings": findings,
         "boundary": {
-            "aggregateEvidenceOnly": True,
-            "doesNotFetchRelatedRepositories": True,
+            "advisoryProductScope": True,
             "doesNotExpandGitHubAppPermissions": True,
             "memberFailureCannotBeAveragedAway": True,
         },
@@ -256,6 +265,8 @@ def build_product_assessment(
 def render_product_markdown(assessment: dict[str, Any]) -> str:
     product = assessment["product"]
     complete = assessment["completeness"]
+    acquisition = assessment["acquisition"]
+    relationships = assessment["relationshipEvaluation"]
     lines = [
         f"# IaaP Guard Product Assessment — {product['name']}",
         "",
@@ -264,6 +275,8 @@ def render_product_markdown(assessment: dict[str, Any]) -> str:
         f"Product evidence score: **{assessment['overallScore'] if assessment['overallScore'] is not None else 'N/A'}**  ",
         f"Weakest member score: **{assessment['minimumMemberScore'] if assessment['minimumMemberScore'] is not None else 'N/A'}**  ",
         f"Evidence completeness: **{complete['present']}/{complete['registered']} repositories**  ",
+        f"Acquisition: **{acquisition['mode']}**  ",
+        f"Relationship evaluation: **{relationships['status']}**  ",
         f"Evidence revision: `{assessment['evidenceRevision']}`",
         "",
         "> Product score summarizes demonstrated coverage. A member FAIL still fails the product, and missing required member evidence produces INCOMPLETE.",
