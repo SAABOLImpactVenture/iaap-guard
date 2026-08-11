@@ -5,6 +5,17 @@ from typing import Any
 from .planning import build_planning_report
 
 
+def _planning_findings(assessment: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for item in assessment.get("findings") or []:
+        finding = dict(item)
+        repository = str(finding.get("repository") or "unknown")
+        path = str(finding.get("path") or "unknown")
+        finding["path"] = f"{repository}:{path}"
+        findings.append(finding)
+    return findings
+
+
 def build_product_planning_report(assessment: dict[str, Any]) -> dict[str, Any]:
     """Create a product-scoped improvement plan from aggregated member evidence.
 
@@ -20,7 +31,7 @@ def build_product_planning_report(assessment: dict[str, Any]) -> dict[str, Any]:
         "repository": {"name": f"product:{assessment['product']['id']}"},
         "revision": {"sha": assessment["evidenceRevision"][:40]},
         "detectedComponents": [],
-        "findings": assessment.get("findings") or [],
+        "findings": _planning_findings(assessment),
         "ruleResults": [],
         "dimensionScores": assessment.get("dimensionScores") or [],
         "overallScore": assessment.get("overallScore"),
@@ -121,12 +132,11 @@ def render_product_planning_markdown(report: dict[str, Any]) -> str:
 
             lines.append("Traceability:")
             for evidence in epic["evidence"]:
-                repository = evidence.get("repository") or "unknown"
                 location = str(evidence.get("path") or "unknown")
                 if evidence.get("line") is not None:
                     location += f":{evidence['line']}"
                 lines.append(
-                    f"- `{repository}:{location}` — **{evidence.get('result')} {evidence.get('ruleId')}** — {evidence.get('evidence')}"
+                    f"- `{location}` — **{evidence.get('result')} {evidence.get('ruleId')}** — {evidence.get('evidence')}"
                 )
             lines.append("")
 
