@@ -160,11 +160,13 @@ PYTHONPATH=src python3 -m iaap_guard.cli plan . \
 
 Write the report to a file with `--output`.
 
-## GitHub App target experience
+## GitHub App experience
 
-The GitHub App should surface a compact planning section beneath deterministic findings so a team can move from architecture evidence to a planning conversation without leaving the pull request.
+When a deterministic scan produces WARNING or FAIL findings, the beta GitHub App appends an **Improvement Plan** section to the existing `IaaP Guard / Architecture` Check. The Check retains the original architecture conclusion and findings, then shows the Objective, measurable Key Results, Epics mapped to those KRs, Features, candidate User Stories, candidate Tasks, and source-evidence traceability.
 
-The canonical machine-readable report remains `planning-report/v1`. GitHub rendering is only an adapter over that contract.
+When a scan has no findings, or when a pull request has no IaaP-relevant changes, Guard does not invent planning work. The Check keeps the existing PASS/no-relevant-change behavior without an Improvement Plan section.
+
+The canonical machine-readable report remains `planning-report/v1`. GitHub rendering is only an adapter over that contract and does not change Guard's permissions or infrastructure authority.
 
 ## Future extension: existing OKRs
 
