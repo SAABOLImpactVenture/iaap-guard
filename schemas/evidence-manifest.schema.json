@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.saabol.example/iaap-guard/evidence-manifest/v1.json",
+  "title": "IaaP Guard Evidence Continuity Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceModelVersion",
+    "repository",
+    "currentRevision",
+    "baselineRevision",
+    "evidenceDigests",
+    "governanceState",
+    "changeAssessment",
+    "evidenceContinuity",
+    "authorityEvidence",
+    "disposition",
+    "boundary",
+    "evidenceDigest"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "evidence-manifest/v1"},
+    "evidenceModelVersion": {"const": "continuity/v1"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1}
+      }
+    },
+    "currentRevision": {"$ref": "#/$defs/revision"},
+    "baselineRevision": {
+      "oneOf": [
+        {"$ref": "#/$defs/revision"},
+        {"type": "null"}
+      ]
+    },
+    "evidenceDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentScan", "baselineScan"],
+      "properties": {
+        "currentScan": {"$ref": "#/$defs/digest"},
+        "baselineScan": {
+          "oneOf": [
+            {"$ref": "#/$defs/digest"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "governanceState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currentRuleCatalogVersion",
+        "baselineRuleCatalogVersion",
+        "currentScoringModelVersion",
+        "baselineScoringModelVersion",
+        "currentConclusion",
+        "baselineConclusion"
+      ],
+      "properties": {
+        "currentRuleCatalogVersion": {"type": "string", "minLength": 1},
+        "baselineRuleCatalogVersion": {"type": ["string", "null"]},
+        "currentScoringModelVersion": {"type": "string", "minLength": 1},
+        "baselineScoringModelVersion": {"type": ["string", "null"]},
+        "currentConclusion": {"enum": ["success", "neutral", "failure"]},
+        "baselineConclusion": {
+          "enum": ["success", "neutral", "failure", null]
+        }
+      }
+    },
+    "changeAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceStateChanged",
+        "evidenceChanged",
+        "ruleCatalogChanged",
+        "scoringModelChanged",
+        "ruleStateChanged",
+        "findingEvidenceChanged",
+        "materiality",
+        "ruleTransitions",
+        "findingDelta"
+      ],
+      "properties": {
+        "sourceStateChanged": {"type": "boolean"},
+        "evidenceChanged": {"type": "boolean"},
+        "ruleCatalogChanged": {"type": "boolean"},
+        "scoringModelChanged": {"type": "boolean"},
+        "ruleStateChanged": {"type": "boolean"},
+        "findingEvidenceChanged": {"type": "boolean"},
+        "materiality": {
+          "enum": [
+            "unknown_without_baseline",
+            "no_guard_material_change_detected",
+            "guard_material_change_detected"
+          ]
+        },
+        "ruleTransitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ruleId", "from", "to"],
+            "properties": {
+              "ruleId": {"type": "string", "minLength": 1},
+              "from": {
+                "enum": ["PASS", "WARNING", "FAIL", "NOT_APPLICABLE", null]
+              },
+              "to": {
+                "enum": ["PASS", "WARNING", "FAIL", "NOT_APPLICABLE", null]
+              }
+            }
+          }
+        },
+        "findingDelta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["introduced", "resolved", "unchanged"],
+          "properties": {
+            "introduced": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/findingEvidence"}
+            },
+            "resolved": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/findingEvidence"}
+            },
+            "unchanged": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "evidenceContinuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasons"],
+      "properties": {
+        "status": {"enum": ["not_established", "supported", "review_required"]},
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "authorityEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "statement"],
+      "properties": {
+        "status": {"const": "not_determined"},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "statement"],
+      "properties": {
+        "status": {
+          "enum": ["baseline_required", "human_review_required", "no_additional_guard_review"]
+        },
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorizationDetermination", "statement"],
+      "properties": {
+        "authorizationDetermination": {"const": false},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidenceDigest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha"],
+      "properties": {
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "ref": {"type": "string"}
+      }
+    },
+    "findingEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "result", "path", "evidence"],
+      "properties": {
+        "ruleId": {"type": "string", "minLength": 1},
+        "result": {"enum": ["WARNING", "FAIL"]},
+        "path": {"type": "string", "minLength": 1},
+        "line": {"type": "integer", "minimum": 1},
+        "evidence": {"type": "string"}
+      }
+    }
+  }
+}
