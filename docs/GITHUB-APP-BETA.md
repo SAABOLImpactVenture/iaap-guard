@@ -88,6 +88,12 @@ For local unit testing only, direct `IAAP_GUARD_GITHUB_PRIVATE_KEY` and `IAAP_GU
 
 The Lambda execution role can only call `secretsmanager:GetSecretValue` against the two configured secret ARNs.
 
+## Beta operational guardrails
+
+The Lambda reserves a conservative default concurrency of **5** through the `GuardReservedConcurrency` deployment parameter. This bounds simultaneous beta executions without changing the stateless webhook architecture. In an emergency, an operator can update the stack with reserved concurrency set to **0** to stop Lambda invocations. While set to zero, health checks and GitHub webhook deliveries will be throttled; restore a positive limit deliberately after the issue is resolved.
+
+The stack explicitly manages the function's CloudWatch Logs log group with **14-day retention**. It also creates CloudWatch alarms for any Lambda Errors, any Lambda Throttles, and maximum Duration at or above **50 seconds** against the 60-second function timeout. Missing metric data is treated as not breaching. The alarms intentionally have no notification actions in this phase; notification routing remains a later operational decision.
+
 ## Authentication flow
 
 For each handled delivery:
@@ -211,14 +217,15 @@ Build from the repository root:
 sam build --template-file deploy/aws-lambda/template.yaml
 ```
 
-Deploy using your chosen stack/region and pass the three parameters:
+Deploy using your chosen stack/region, pass the three required GitHub App parameters, and optionally override the default beta concurrency:
 
 ```bash
 sam deploy --guided \
   --parameter-overrides \
     GitHubAppId=<numeric-app-id> \
     GitHubPrivateKeySecretArn=<private-key-secret-arn> \
-    GitHubWebhookSecretArn=<webhook-secret-arn>
+    GitHubWebhookSecretArn=<webhook-secret-arn> \
+    GuardReservedConcurrency=5
 ```
 
 After deployment, copy the `WebhookUrl` stack output into the GitHub App's Webhook URL field.

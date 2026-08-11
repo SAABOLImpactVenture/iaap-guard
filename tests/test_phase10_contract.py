@@ -49,6 +49,15 @@ class Phase10ContractTests(unittest.TestCase):
         self.assertEqual(function["Runtime"], "python3.12")
         self.assertEqual(function["FunctionUrlConfig"]["AuthType"], "NONE")
         self.assertEqual(function["FunctionUrlConfig"]["InvokeMode"], "BUFFERED")
+        self.assertEqual(
+            function["ReservedConcurrentExecutions"],
+            {"Ref": "GuardReservedConcurrency"},
+        )
+
+        concurrency = document["Parameters"]["GuardReservedConcurrency"]
+        self.assertEqual(concurrency["Type"], "Number")
+        self.assertEqual(concurrency["Default"], 5)
+        self.assertEqual(concurrency["MinValue"], 0)
 
         environment = function["Environment"]["Variables"]
         self.assertIn("IAAP_GUARD_GITHUB_APP_ID", environment)
@@ -65,6 +74,50 @@ class Phase10ContractTests(unittest.TestCase):
         self.assertEqual(len(statements[0]["Resource"]), 2)
         self.assertNotIn("Resource: '*'", text)
         self.assertNotIn('Resource: "*"', text)
+
+    def test_lambda_template_has_beta_operational_visibility(self):
+        document = yaml.safe_load(
+            (ROOT / "deploy/aws-lambda/template.yaml").read_text(encoding="utf-8")
+        )
+        resources = document["Resources"]
+
+        log_group = resources["GuardFunctionLogGroup"]
+        self.assertEqual(log_group["Type"], "AWS::Logs::LogGroup")
+        self.assertEqual(
+            log_group["Properties"],
+            {
+                "LogGroupName": {"Fn::Sub": "/aws/lambda/${GuardFunction}"},
+                "RetentionInDays": 14,
+            },
+        )
+
+        expected_alarms = {
+            "GuardFunctionErrorsAlarm": ("Errors", "Sum", 1),
+            "GuardFunctionThrottlesAlarm": ("Throttles", "Sum", 1),
+            "GuardFunctionDurationAlarm": ("Duration", "Maximum", 50000),
+        }
+        for logical_id, (metric, statistic, threshold) in expected_alarms.items():
+            alarm = resources[logical_id]
+            self.assertEqual(alarm["Type"], "AWS::CloudWatch::Alarm")
+            properties = alarm["Properties"]
+            self.assertEqual(properties["Namespace"], "AWS/Lambda")
+            self.assertEqual(properties["MetricName"], metric)
+            self.assertEqual(
+                properties["Dimensions"],
+                [{"Name": "FunctionName", "Value": {"Ref": "GuardFunction"}}],
+            )
+            self.assertEqual(properties["Statistic"], statistic)
+            self.assertEqual(properties["Period"], 60)
+            self.assertEqual(properties["EvaluationPeriods"], 1)
+            self.assertEqual(properties["Threshold"], threshold)
+            self.assertEqual(
+                properties["ComparisonOperator"],
+                "GreaterThanOrEqualToThreshold",
+            )
+            self.assertEqual(properties["TreatMissingData"], "notBreaching")
+            self.assertNotIn("AlarmActions", properties)
+            self.assertNotIn("OKActions", properties)
+            self.assertNotIn("InsufficientDataActions", properties)
 
     def test_runtime_dependencies_are_pinned(self):
         requirements = (ROOT / "requirements-app.txt").read_text(encoding="utf-8").splitlines()
