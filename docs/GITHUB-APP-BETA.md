@@ -92,6 +92,8 @@ The Lambda execution role can only call `secretsmanager:GetSecretValue` against 
 
 The Lambda reserves a conservative default concurrency of **5** through the `GuardReservedConcurrency` deployment parameter. This bounds simultaneous beta executions without changing the stateless webhook architecture. In an emergency, an operator can update the stack with reserved concurrency set to **0** to stop Lambda invocations. While set to zero, health checks and GitHub webhook deliveries will be throttled; restore a positive limit deliberately after the issue is resolved.
 
+Some low-quota or new AWS accounts cannot allocate the default reserved concurrency. For those accounts, set `GuardReservedConcurrencyEnabled=false` temporarily. This omits the function-level reserved concurrency setting; it does not set concurrency to zero. Invocations remain bounded by the regional Lambda account concurrency quota, but disabling reserved concurrency does **not** provide equivalent per-function isolation. As the beta matures, increasing the regional Lambda concurrency quota and re-enabling the per-function limit is preferred.
+
 The stack explicitly manages the function's CloudWatch Logs log group with **14-day retention**. It also creates CloudWatch alarms for any Lambda Errors, any Lambda Throttles, and maximum Duration at or above **50 seconds** against the 60-second function timeout. Missing metric data is treated as not breaching. The alarms intentionally have no notification actions in this phase; notification routing remains a later operational decision.
 
 ## Authentication flow
@@ -225,8 +227,11 @@ sam deploy --guided \
     GitHubAppId=<numeric-app-id> \
     GitHubPrivateKeySecretArn=<private-key-secret-arn> \
     GitHubWebhookSecretArn=<webhook-secret-arn> \
+    GuardReservedConcurrencyEnabled=true \
     GuardReservedConcurrency=5
 ```
+
+For a low-quota account that cannot allocate reserved concurrency, deploy temporarily with `GuardReservedConcurrencyEnabled=false`. The `GuardReservedConcurrency` value is ignored while the setting is disabled.
 
 After deployment, copy the `WebhookUrl` stack output into the GitHub App's Webhook URL field.
 

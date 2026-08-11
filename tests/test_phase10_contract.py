@@ -51,13 +51,33 @@ class Phase10ContractTests(unittest.TestCase):
         self.assertEqual(function["FunctionUrlConfig"]["InvokeMode"], "BUFFERED")
         self.assertEqual(
             function["ReservedConcurrentExecutions"],
-            {"Ref": "GuardReservedConcurrency"},
+            {
+                "Fn::If": [
+                    "GuardReservedConcurrencyIsEnabled",
+                    {"Ref": "GuardReservedConcurrency"},
+                    {"Ref": "AWS::NoValue"},
+                ]
+            },
         )
 
         concurrency = document["Parameters"]["GuardReservedConcurrency"]
         self.assertEqual(concurrency["Type"], "Number")
         self.assertEqual(concurrency["Default"], 5)
         self.assertEqual(concurrency["MinValue"], 0)
+
+        concurrency_enabled = document["Parameters"]["GuardReservedConcurrencyEnabled"]
+        self.assertEqual(concurrency_enabled["Type"], "String")
+        self.assertEqual(concurrency_enabled["Default"], "true")
+        self.assertEqual(concurrency_enabled["AllowedValues"], ["true", "false"])
+        self.assertEqual(
+            document["Conditions"]["GuardReservedConcurrencyIsEnabled"],
+            {
+                "Fn::Equals": [
+                    {"Ref": "GuardReservedConcurrencyEnabled"},
+                    "true",
+                ]
+            },
+        )
 
         environment = function["Environment"]["Variables"]
         self.assertIn("IAAP_GUARD_GITHUB_APP_ID", environment)
