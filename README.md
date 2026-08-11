@@ -148,15 +148,15 @@ Product scope adds:
 - aggregate dimension coverage plus the weakest-member score;
 - **INCOMPLETE** when required repository evidence is unavailable;
 - fail-safe semantics so a member FAIL cannot be averaged away;
-- cross-repository contract and reconciler relationship checks;
+- cross-repository consumer/canonical contract compatibility checks;
 - repository-qualified finding traceability; and
 - `product-planning-report/v1` for one evidence-backed improvement plan across the product boundary.
 
-The GitHub App does not trust a PR to expand its own read scope. Product membership is read from the triggering repository's **default branch**, and related repositories are evaluated only when they are explicitly registered, under the same owner and visibility, and accessible through IaaP Guard. Each related repository uses a separate short-lived token restricted to that one repository with `contents:read`.
+The GitHub App does not trust a PR—or one repository acting alone—to expand related-repository read scope. Product membership is read from trusted **default branches**, and a related repository participates only when it reciprocally declares the same product identity and membership, is under the same owner and visibility, and is accessible through IaaP Guard. Each related repository uses a separate short-lived token restricted to that one repository with `contents:read`.
 
 In V1 the triggering repository still owns the GitHub Check conclusion; the product result is advisory context. This prevents an unrelated existing issue in another member repository from unexpectedly blocking the current PR.
 
-See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) for the manifest, trust model, snapshot semantics, cross-repository rules, CLI commands, and product-level planning contract.
+See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) for the manifest, reciprocal trust model, snapshot semantics, cross-repository compatibility rule, CLI commands, and product-level planning contract.
 
 ## Phase 9 GitHub Action
 
@@ -300,4 +300,4 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 **PHASE 11 — Evidence-to-Planning Layer: COMPLETE**  
 **PHASE 12 — Multi-Repository Product Scope: IN PROGRESS**
 
-Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 added the advisory `planning-report/v1` path. Phase 12 adds explicit multi-repository product membership, fail-safe product aggregation, bounded cross-repository relationship checks, trusted GitHub federation, and product-level OKR planning without turning related-repository access into broad installation authority.
+Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 added the advisory `planning-report/v1` path. Phase 12 adds explicit reciprocal multi-repository product membership, fail-safe product aggregation, bounded cross-repository contract compatibility checks, trusted GitHub federation, and product-level OKR planning without turning related-repository access into broad installation authority.
