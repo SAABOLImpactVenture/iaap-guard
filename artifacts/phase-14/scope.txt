@@ -1,0 +1,2 @@
+In scope: PR-base scan, evidence-manifest comparison, Check rendering, product-aware preservation, tests, docs.
+Out of scope: blocking continuity policy, authority determination, exception approval, persistent evidence store, permission expansion.

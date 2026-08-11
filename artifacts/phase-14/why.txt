@@ -1,0 +1,1 @@
+Phase 14 moves Evidence Continuity from a local/CLI contract into the live GitHub PR experience while keeping the same authority boundary.

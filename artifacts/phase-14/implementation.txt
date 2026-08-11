@@ -1,0 +1,3 @@
+Implementation entrypoint: src/iaap_guard/github_evidence_runtime.py
+Product-aware composition: src/iaap_guard/github_product_runtime.py
+Tests: tests/test_phase14_pr_base_continuity.py

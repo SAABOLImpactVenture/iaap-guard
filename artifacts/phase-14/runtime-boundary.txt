@@ -1,0 +1,3 @@
+PR base SHA comes from GitHub pull-request state, not PR-head content.
+Evidence continuity is advisory in Phase 14.
+Repository scan semantics own the Check conclusion.
