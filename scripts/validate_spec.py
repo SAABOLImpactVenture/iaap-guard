@@ -10,6 +10,8 @@ from jsonschema.validators import validator_for
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "rules/catalog.yaml"
 RESULT_SCHEMA = ROOT / "schemas/scan-result.schema.json"
+PLANNING_CATALOG = ROOT / "planning/catalog.yaml"
+PLANNING_SCHEMA = ROOT / "schemas/planning-report.schema.json"
 EXPECTED = ROOT / "fixtures/expected-results.yaml"
 
 
@@ -23,13 +25,19 @@ def load_yaml(path: Path):
 
 def validate_machine_readable_files() -> None:
     catalog = load_yaml(CATALOG)
+    planning_catalog = load_yaml(PLANNING_CATALOG)
     expected = load_yaml(EXPECTED)
     result_schema = json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))
+    planning_schema = json.loads(PLANNING_SCHEMA.read_text(encoding="utf-8"))
 
     if catalog.get("catalogVersion") != "iaap-guard/v0.1.2":
         fail("unexpected rule catalog version")
     if catalog.get("scoringModelVersion") != "coverage/v1":
         fail("unexpected scoring model version")
+    if planning_catalog.get("planningCatalogVersion") != "iaap-planning/v0.1.0":
+        fail("unexpected planning catalog version")
+    if planning_catalog.get("schemaVersion") != "planning-report/v1":
+        fail("unexpected planning report schema version")
 
     rules = catalog.get("rules", [])
     ids = [rule.get("id") for rule in rules]
@@ -48,6 +56,28 @@ def validate_machine_readable_files() -> None:
             fail(f"{rule.get('id')}: evidenceRequirement is required")
         if not rule.get("recommendation"):
             fail(f"{rule.get('id')}: recommendation is required")
+
+    planning_rules = planning_catalog.get("rules") or {}
+    missing_plans = set(ids) - set(planning_rules)
+    if missing_plans:
+        fail(f"rules missing planning templates: {sorted(missing_plans)}")
+    extra_plans = set(planning_rules) - set(ids)
+    if extra_plans:
+        fail(f"planning templates reference unknown rules: {sorted(extra_plans)}")
+
+    for rule_id, plan in planning_rules.items():
+        for required in ("epic", "outcome", "feature", "story", "acceptanceEvidence", "candidateTasks"):
+            if not plan.get(required):
+                fail(f"{rule_id}: planning field {required} is required")
+        story = plan["story"]
+        for required in ("actor", "want", "soThat"):
+            if not story.get(required):
+                fail(f"{rule_id}: story field {required} is required")
+
+    dimensions = set(catalog.get("dimensions") or [])
+    planning_dimensions = set((planning_catalog.get("dimensions") or {}).keys())
+    if planning_dimensions != dimensions:
+        fail("planning dimensions must exactly match the scoring dimensions")
 
     case_paths: set[str] = set()
     critical_fixture_rules: set[str] = set()
@@ -81,8 +111,9 @@ def validate_machine_readable_files() -> None:
     for path in (ROOT / "fixtures").rglob("*.json"):
         json.loads(path.read_text(encoding="utf-8"))
 
-    validator_cls = validator_for(result_schema)
-    validator_cls.check_schema(result_schema)
+    for schema in (result_schema, planning_schema):
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
 
     required_result_fields = {
         "schemaVersion",
@@ -100,9 +131,22 @@ def validate_machine_readable_files() -> None:
     if set(result_schema.get("required", [])) != required_result_fields:
         fail("scan-result schema required fields diverged from the Phase 8 contract")
 
+    required_planning_fields = {
+        "schemaVersion",
+        "planningCatalogVersion",
+        "status",
+        "source",
+        "totals",
+        "objectives",
+        "boundary",
+    }
+    if set(planning_schema.get("required", [])) != required_planning_fields:
+        fail("planning-report schema required fields diverged from the V1 contract")
+
     print(
         f"specification validation passed: {len(rules)} rules, "
-        f"{len(case_paths)} fixtures, {len(required_fail_fixtures)} critical FAIL rules"
+        f"{len(case_paths)} fixtures, {len(required_fail_fixtures)} critical FAIL rules, "
+        f"{len(planning_rules)} planning templates"
     )
 
 
