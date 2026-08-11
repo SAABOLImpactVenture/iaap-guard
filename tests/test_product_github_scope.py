@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -141,7 +142,14 @@ class ProductGitHubScopeTests(unittest.TestCase):
         assessment, plan = scope
         self.assertTrue(assessment["completeness"]["complete"])
         self.assertEqual(assessment["completeness"]["present"], 2)
+        self.assertEqual(assessment["acquisition"]["mode"], "trusted-github-federation")
+        self.assertTrue(assessment["acquisition"]["relatedRepositoryContentRead"])
+        self.assertTrue(assessment["acquisition"]["reciprocalMembershipRequired"])
+        self.assertEqual(assessment["relationshipEvaluation"]["status"], "complete")
+        self.assertEqual(assessment["relationshipEvaluation"]["rules"], ["IAP-C001"])
         self.assertEqual(plan["schemaVersion"], "product-planning-report/v1")
+        self.assertEqual(plan["source"]["acquisitionMode"], "trusted-github-federation")
+        self.assertEqual(plan["source"]["relationshipEvaluationStatus"], "complete")
         manifest_calls = [call for call in api.calls if "/contents/.iaap/product.yaml" in call[1]]
         self.assertEqual(len(manifest_calls), 2)
         self.assertTrue(all("?ref=main" in call[1] for call in manifest_calls))
@@ -163,6 +171,8 @@ class ProductGitHubScopeTests(unittest.TestCase):
         assessment, _ = _evaluate(api)
         self.assertEqual(assessment["conclusion"], "incomplete")
         self.assertEqual(assessment["completeness"]["missingRequired"], ["example/control-plane"])
+        self.assertEqual(assessment["relationshipEvaluation"]["status"], "incomplete")
+        self.assertTrue(any(item["ruleId"] == "IAP-PR002" for item in assessment["findings"]))
         self.assertEqual(api.tarball_calls, [])
 
     def test_cross_owner_repository_is_not_read_and_product_is_incomplete(self):
@@ -229,7 +239,40 @@ spec:
         self.assertEqual(len(compatibility), 1)
         self.assertEqual(compatibility[0]["repository"], "example/storefront")
         self.assertIn("azure", compatibility[0]["evidence"])
+        self.assertEqual(assessment["relationshipEvaluation"]["status"], "complete")
         self.assertTrue(any(epic["ruleId"] == "IAP-C001" for objective in plan["objectives"] for epic in objective["epics"]))
+
+    def test_relationship_bundle_limit_degrades_to_incomplete_instead_of_crashing(self):
+        api = _ProductApi(_manifest())
+        canonical = """apiVersion: platform.example.org/v1alpha1
+kind: InfrastructureProductSchema
+metadata:
+  name: cloud-foundation
+spec:
+  required: [owner, cloud]
+  properties:
+    owner:
+      type: string
+    cloud:
+      type: string
+      enum: [aws, gcp]
+"""
+        with patch("iaap_guard.github_product_scope.MAX_RELATIONSHIP_BUNDLE_BYTES", 32):
+            with _trigger_root({"product.yaml": canonical}) as root:
+                assessment, plan = evaluate_trusted_product_scope(
+                    api=api,
+                    app_jwt="app-jwt",
+                    trigger_token="trigger-token",
+                    trigger_repository="example/contracts",
+                    trigger_root=root,
+                    trigger_result=_trigger_result(),
+                    extract_archive=_safe_extract_tarball,
+                )
+        self.assertEqual(assessment["conclusion"], "incomplete")
+        self.assertEqual(assessment["relationshipEvaluation"]["status"], "incomplete")
+        self.assertIn("bounded bundle limit", assessment["relationshipEvaluation"]["reason"])
+        self.assertTrue(any(item["ruleId"] == "IAP-PR002" for item in assessment["findings"]))
+        self.assertEqual(plan["source"]["relationshipEvaluationStatus"], "incomplete")
 
 
 if __name__ == "__main__":
