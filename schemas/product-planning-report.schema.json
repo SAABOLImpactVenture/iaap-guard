@@ -12,7 +12,17 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["product", "evidenceRevision", "productConclusion", "overallScore", "minimumMemberScore", "registeredRepositories", "presentRepositories"],
+      "required": [
+        "product",
+        "evidenceRevision",
+        "productConclusion",
+        "overallScore",
+        "minimumMemberScore",
+        "registeredRepositories",
+        "presentRepositories",
+        "acquisitionMode",
+        "relationshipEvaluationStatus"
+      ],
       "properties": {
         "product": {"type": "object"},
         "evidenceRevision": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -20,7 +30,9 @@
         "overallScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
         "minimumMemberScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
         "registeredRepositories": {"type": "integer", "minimum": 1},
-        "presentRepositories": {"type": "integer", "minimum": 0}
+        "presentRepositories": {"type": "integer", "minimum": 0},
+        "acquisitionMode": {"enum": ["provided-evidence", "trusted-github-federation"]},
+        "relationshipEvaluationStatus": {"enum": ["not-evaluated", "complete", "incomplete"]}
       }
     },
     "totals": {"type": "object"},
