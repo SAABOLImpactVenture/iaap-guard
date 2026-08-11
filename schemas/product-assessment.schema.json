@@ -10,6 +10,8 @@
     "evidenceRevision",
     "ruleCatalogVersion",
     "scoringModelVersion",
+    "acquisition",
+    "relationshipEvaluation",
     "members",
     "completeness",
     "dimensionScores",
@@ -33,6 +35,26 @@
     "evidenceRevision": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "ruleCatalogVersion": {"type": ["string", "null"]},
     "scoringModelVersion": {"type": ["string", "null"]},
+    "acquisition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "relatedRepositoryContentRead", "reciprocalMembershipRequired"],
+      "properties": {
+        "mode": {"enum": ["provided-evidence", "trusted-github-federation"]},
+        "relatedRepositoryContentRead": {"type": "boolean"},
+        "reciprocalMembershipRequired": {"type": "boolean"}
+      }
+    },
+    "relationshipEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "rules", "reason"],
+      "properties": {
+        "status": {"enum": ["not-evaluated", "complete", "incomplete"]},
+        "rules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
     "members": {
       "type": "array",
       "minItems": 1,
@@ -70,10 +92,9 @@
     "boundary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["aggregateEvidenceOnly", "doesNotFetchRelatedRepositories", "doesNotExpandGitHubAppPermissions", "memberFailureCannotBeAveragedAway"],
+      "required": ["advisoryProductScope", "doesNotExpandGitHubAppPermissions", "memberFailureCannotBeAveragedAway"],
       "properties": {
-        "aggregateEvidenceOnly": {"const": true},
-        "doesNotFetchRelatedRepositories": {"const": true},
+        "advisoryProductScope": {"const": true},
         "doesNotExpandGitHubAppPermissions": {"const": true},
         "memberFailureCannotBeAveragedAway": {"const": true}
       }
