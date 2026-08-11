@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+MAX_PRODUCT_REPOSITORIES = 12
+
 ROLE_ORDER = (
     "product-contract",
     "experience",
@@ -34,6 +36,8 @@ def load_product_manifest(path: str | Path) -> dict[str, Any]:
         raise ValueError("product manifest requires product.id and product.name")
     if not isinstance(repositories, list) or not repositories:
         raise ValueError("product manifest requires at least one repository")
+    if len(repositories) > MAX_PRODUCT_REPOSITORIES:
+        raise ValueError(f"product manifest supports at most {MAX_PRODUCT_REPOSITORIES} repositories in V1")
 
     names: set[str] = set()
     primary_count = 0
