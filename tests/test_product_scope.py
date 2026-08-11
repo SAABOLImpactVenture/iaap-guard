@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
+
+from jsonschema import Draft202012Validator
 
 from iaap_guard.product import build_product_assessment
 from iaap_guard.product_planning import build_product_planning_report, render_product_planning_markdown
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _manifest(required_second=True):
@@ -52,6 +58,11 @@ def _result(name, *, score=100, conclusion="success", finding=None, rule_version
     }
 
 
+def _validate_schema(filename: str, instance: dict) -> None:
+    schema = json.loads((ROOT / "schemas" / filename).read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(instance)
+
+
 class ProductScopeTests(unittest.TestCase):
     def test_complete_product_aggregates_member_evidence(self):
         assessment = build_product_assessment(
@@ -64,7 +75,11 @@ class ProductScopeTests(unittest.TestCase):
         self.assertEqual(assessment["overallScore"], 100)
         self.assertEqual(assessment["minimumMemberScore"], 100)
         self.assertEqual(assessment["completeness"]["present"], 2)
+        self.assertEqual(assessment["acquisition"]["mode"], "provided-evidence")
+        self.assertFalse(assessment["acquisition"]["relatedRepositoryContentRead"])
+        self.assertEqual(assessment["relationshipEvaluation"]["status"], "not-evaluated")
         self.assertTrue(assessment["boundary"]["memberFailureCannotBeAveragedAway"])
+        _validate_schema("product-assessment.schema.json", assessment)
 
     def test_member_failure_cannot_be_averaged_away(self):
         finding = {
@@ -96,6 +111,7 @@ class ProductScopeTests(unittest.TestCase):
         self.assertFalse(assessment["completeness"]["complete"])
         self.assertEqual(assessment["completeness"]["missingRequired"], ["example/control-plane"])
         self.assertTrue(any(item["ruleId"] == "IAP-PR001" for item in assessment["findings"]))
+        _validate_schema("product-assessment.schema.json", assessment)
 
     def test_missing_optional_member_does_not_make_product_incomplete(self):
         assessment = build_product_assessment(_manifest(required_second=False), [_result("example/contracts")])
@@ -136,6 +152,9 @@ class ProductScopeTests(unittest.TestCase):
         self.assertEqual(report["schemaVersion"], "product-planning-report/v1")
         self.assertGreater(report["totals"]["epics"], 0)
         self.assertTrue(report["boundary"]["doesNotExpandGitHubAppPermissions"])
+        self.assertEqual(report["source"]["acquisitionMode"], "provided-evidence")
+        self.assertEqual(report["source"]["relationshipEvaluationStatus"], "not-evaluated")
+        _validate_schema("product-planning-report.schema.json", report)
         markdown = render_product_planning_markdown(report)
         self.assertIn("example/contracts:product/schema.yaml:12", markdown)
         self.assertIn("Key Results", markdown)
