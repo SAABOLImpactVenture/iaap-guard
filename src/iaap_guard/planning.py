@@ -156,7 +156,12 @@ def build_planning_report(
         for rule_id, rule_findings in grouped_rules.items():
             rule_plan = (catalog.get("rules") or {}).get(rule_id) or _fallback_rule_plan(rule_id, rule_findings)
             epic_id = f"{objective_id}-E{len(epics) + 1}"
-            mapped_kr_ids = [item["id"] for item in key_results]
+            has_fail = any(item.get("result") == "FAIL" for item in rule_findings)
+            mapped_kr_ids = [
+                item["id"]
+                for item in key_results
+                if item.get("metric") != "blockingGuardFindings" or has_fail
+            ]
             story = rule_plan["story"]
             candidate_tasks = [
                 {"id": f"{epic_id}-T{index}", "title": task, "candidate": True}
