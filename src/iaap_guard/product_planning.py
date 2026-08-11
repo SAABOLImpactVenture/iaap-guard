@@ -17,12 +17,7 @@ def _planning_findings(assessment: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def build_product_planning_report(assessment: dict[str, Any]) -> dict[str, Any]:
-    """Create a product-scoped improvement plan from aggregated member evidence.
-
-    The existing deterministic planning engine remains the source of Objective,
-    KR, Epic, Feature, Story, and Task semantics. This adapter changes only the
-    source scope from one repository to one registered product.
-    """
+    """Create a product-scoped improvement plan from aggregated member evidence."""
 
     synthetic = {
         "schemaVersion": "scan-result/v1",
@@ -50,6 +45,8 @@ def build_product_planning_report(assessment: dict[str, Any]) -> dict[str, Any]:
             "minimumMemberScore": assessment.get("minimumMemberScore"),
             "registeredRepositories": assessment["completeness"]["registered"],
             "presentRepositories": assessment["completeness"]["present"],
+            "acquisitionMode": assessment["acquisition"]["mode"],
+            "relationshipEvaluationStatus": assessment["relationshipEvaluation"]["status"],
         },
         "totals": base["totals"],
         "objectives": base["objectives"],
@@ -74,9 +71,11 @@ def render_product_planning_markdown(report: dict[str, Any]) -> str:
         f"Product evidence score: **{source['overallScore'] if source['overallScore'] is not None else 'N/A'}**  ",
         f"Weakest member score: **{source['minimumMemberScore'] if source['minimumMemberScore'] is not None else 'N/A'}**  ",
         f"Evidence coverage: **{source['presentRepositories']}/{source['registeredRepositories']} repositories**  ",
+        f"Acquisition: **{source['acquisitionMode']}**  ",
+        f"Relationship evaluation: **{source['relationshipEvaluationStatus']}**  ",
         f"Evidence revision: `{source['evidenceRevision']}`",
         "",
-        "> Candidate stories and tasks are planning assistance. Product-level planning does not assign work, manage sprints, fetch related repositories, or expand GitHub App authority.",
+        "> Candidate stories and tasks are planning assistance. The planning layer does not assign work, manage sprints, execute remediation, or expand GitHub App authority.",
         "",
     ]
 
