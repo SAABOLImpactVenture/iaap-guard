@@ -6,11 +6,19 @@
 
 > **IaaS is what you buy. Infrastructure-as-a-Product is what you build. IaaP Guard makes sure you keep building it that way.**
 
-IaaP Guard is a GitHub-native architecture and product-governance system that evaluates whether infrastructure is actually being engineered as a product.
+IaaP Guard is a GitHub-native architecture, product-governance, and evidence-continuity system that evaluates whether infrastructure is actually being engineered as a product — and whether the evidence supporting a previously observed governance state still applies after change.
+
+Its two core product questions are:
+
+> **Is this infrastructure actually being designed, delivered, and governed as a product?**
+>
+> **When the product changes, can we reconstruct what Guard observed, what changed, and whether accountable revalidation is required?**
+
+IaaP Guard does **not** decide whether an action is legally, institutionally, operationally, or deployment-authorized. Evidence continuity is not authorization continuity.
 
 ## Product architecture
 
-The product is intentionally small: a deterministic, stateless repository/PR evaluator with a reusable local core. It does **not** provision infrastructure, connect to customer clouds or Kubernetes clusters, run Terraform/TFE, remediate changes, or compete with generic security scanners.
+The product remains intentionally small: a deterministic, stateless repository/PR evaluator with a reusable local core. It does **not** provision infrastructure, connect to customer clouds or Kubernetes clusters, run Terraform/TFE, remediate changes, or compete with generic security scanners.
 
 ```text
 Repository / PR files
@@ -21,11 +29,17 @@ Structured deterministic parsers
         ↓
 Versioned IaaP rule catalog
         ↓
-Normalized findings
+Normalized findings + coverage score
         ↓
-Coverage-based maturity score
+scan-result/v1
         ↓
-JSON + human-readable result
+Evidence manifest + prior/current comparison
+        ↓
+continuity/v1
+        ↓
+SUPPORTED / REVIEW REQUIRED / NOT ESTABLISHED
+        ↓
+CLI + GitHub Action + GitHub App / Checks
 ```
 
 ### Architecture at a glance
@@ -37,24 +51,25 @@ flowchart LR
   PARSE --> RULES[Versioned IaaP rule catalog]
   RULES --> FIND[Normalized findings]
   FIND --> SCORE[coverage/v1 score]
-  SCORE --> RESULT[JSON + human-readable result]
-  RESULT --> CLI[CLI]
-  RESULT --> ACTION[GitHub Action]
-  RESULT --> APP[GitHub App / Checks]
+  SCORE --> SCAN[scan-result/v1]
+  SCAN --> EVID[evidence-manifest/v1]
+  BASE[Prior / PR-base evidence] --> EVID
+  EVID --> CONT[continuity/v1]
+  CONT --> CLI[CLI]
+  CONT --> ACTION[GitHub Action]
+  CONT --> APP[GitHub App / Checks]
 
   classDef input fill:#0D2438,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC
   classDef classifier fill:#12304A,stroke:#22D3EE,stroke-width:2px,color:#F8FAFC
   classDef governance fill:#3A2A0D,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC
   classDef rules fill:#123A24,stroke:#22C55E,stroke-width:3px,color:#F8FAFC
   classDef evidence fill:#3A1530,stroke:#EC4899,stroke-width:2px,color:#F8FAFC
-  classDef scoring fill:#18152D,stroke:#8B5CF6,stroke-width:2px,color:#F8FAFC
   classDef adapter fill:#102D55,stroke:#3B82F6,stroke-width:2px,color:#F8FAFC
-  class REPO input
+  class REPO,BASE input
   class CLASS classifier
   class PARSE governance
   class RULES rules
-  class FIND,RESULT evidence
-  class SCORE scoring
+  class FIND,SCORE,SCAN,EVID,CONT evidence
   class CLI,ACTION,APP adapter
   linkStyle default stroke:#7DD3FC,stroke-width:2px
 ```
@@ -64,27 +79,27 @@ Adapters remain thin around the same core:
 ```text
 IaaP Guard Core
    ├── CLI
-   ├── GitHub Action     # Phase 9 dogfood
-   └── GitHub App        # Phase 10 public installation + Checks
+   ├── GitHub Action
+   └── GitHub App
 ```
 
-The adapter is not the product. The durable product IP is the system of IaaP product knowledge, rules, evidence, compatibility, and operating model.
+The adapter is not the product. The durable product IP is the system of IaaP product knowledge, deterministic rules, evidence, continuity semantics, compatibility, and operating model.
 
 <p align="center">
   <img src="docs/assets/showcase/guard-rule-system.svg" alt="IaaP Guard component classifier and deterministic rule system" width="1050"/>
 </p>
 
-## Deterministic core
+## Deterministic architecture evaluation
 
-The merged Phase 8 core implements:
+The deterministic core implements:
 
 - context classification before rule evaluation;
 - safe YAML/JSON and bounded text loading without executing repository code;
-- all 11 rules in `rules/catalog.yaml`;
+- all rules in `rules/catalog.yaml`;
 - normalized `scan-result/v1` output;
 - transparent `coverage/v1` scoring;
 - human-readable and JSON CLI output;
-- the frozen positive/negative fixture contract; and
+- frozen positive/negative fixture contracts; and
 - repeatability, schema, scoring, fixture-isolation, and non-execution tests.
 
 Run the complete validation gate:
@@ -104,17 +119,62 @@ PYTHONPATH=src python3 -m iaap_guard.cli scan . \
 
 Use `--format json` for the normalized machine-readable contract.
 
+## Evidence Continuity
+
+Architecture PASS/FAIL is only a point-in-time statement about the evidence Guard evaluated. Phase 13 adds a deterministic evidence contract that can compare a prior Guard state with the current state and answer a narrower, more durable question: **does the evidence supporting the previous Guard-observed state still apply?**
+
+The core produces `evidence-manifest/v1` and bounded continuity states:
+
+- **SUPPORTED** — Guard found no material rule/finding change within its deterministic scope;
+- **REVIEW REQUIRED** — Guard detected a material change that should be revalidated by an accountable human or governed process;
+- **NOT ESTABLISHED** — a trustworthy baseline was not available.
+
+The evidence record can preserve exact revisions, ruleset/scoring versions, rule-state transitions, introduced/resolved finding evidence, and deterministic evidence digests. It is designed to make a governance sequence reconstructable without converting Guard into a compliance or authorization oracle.
+
+Generate evidence locally:
+
+```bash
+PYTHONPATH=src python3 -m iaap_guard.cli evidence . \
+  --repository example/platform-repo \
+  --revision <CURRENT_SHA> \
+  --baseline prior-scan-result.json \
+  --scan-output current-scan-result.json \
+  --format json
+```
+
+See [`docs/EVIDENCE-CONTINUITY.md`](docs/EVIDENCE-CONTINUITY.md) for the deterministic evidence model and authority boundary.
+
+## PR-base Evidence Continuity
+
+Phase 14 moves Evidence Continuity into the normal GitHub pull-request experience. For an IaaP-relevant PR, the GitHub App uses the immutable **PR-base SHA** as the technical baseline and the immutable **PR-head SHA** as the current state.
+
+```text
+GitHub PR
+   ├── base SHA ──→ deterministic scan ──┐
+   └── head SHA ──→ deterministic scan ──┤
+                                         ↓
+                              evidence-manifest/v1
+                                         ↓
+                                   continuity/v1
+                                         ↓
+                     IaaP Guard / Architecture Check
+```
+
+The PR cannot nominate its own baseline. GitHub PR state supplies the base revision. Evidence Continuity remains **advisory**: repository scan semantics still own the Check conclusion, while `REVIEW REQUIRED` signals that prior evidence should not silently be treated as current authorization or current governance applicability.
+
+See [`docs/PR-BASE-EVIDENCE-CONTINUITY.md`](docs/PR-BASE-EVIDENCE-CONTINUITY.md) for the GitHub adapter behavior.
+
 ## From architecture evidence to an improvement plan
 
-IaaP Guard does more than identify Infrastructure-as-a-Product architecture gaps. When deterministic findings exist, Guard can translate that evidence into a versioned, traceable **Improvement Plan**:
+IaaP Guard can translate deterministic findings into a versioned, traceable **Improvement Plan**:
 
 ```text
 Architecture Evidence → Objectives → Key Results → Epics → Features → Candidate User Stories → Candidate Tasks → Acceptance Evidence
 ```
 
-Epics are explicitly mapped to measurable Key Results, and every proposed work item retains traceability back to the Guard rule and repository evidence that caused it. The planning layer therefore helps a team move from **“what is wrong?”** to **“what should we plan to improve?”** without disconnecting delivery work from the architecture evidence that justified it.
+Epics map to measurable Key Results, and proposed work retains traceability back to the Guard rule and repository evidence that caused it. The planning layer helps a team move from **“what is wrong?”** to **“what should we plan to improve?”** without disconnecting delivery work from the architecture evidence that justified it.
 
-The planning layer is intentionally advisory. IaaP Guard does **not** assign work, manage sprints, estimate capacity, autonomously create backlog items, or execute remediation. Candidate stories and tasks are a planning starting point for accountable teams, not execution commitments.
+The planning layer is intentionally advisory. IaaP Guard does **not** assign work, manage sprints, estimate capacity, autonomously create backlog items, or execute remediation.
 
 Generate a Markdown plan locally:
 
@@ -124,7 +184,7 @@ PYTHONPATH=src python3 -m iaap_guard.cli plan . \
   --revision 0123456789abcdef0123456789abcdef01234567
 ```
 
-Use `--format json` for the normalized `planning-report/v1` contract. See [`docs/PLANNING-REPORT.md`](docs/PLANNING-REPORT.md) for the planning semantics and product boundary.
+See [`docs/PLANNING-REPORT.md`](docs/PLANNING-REPORT.md) for the planning semantics and product boundary.
 
 ## One product, multiple repositories
 
@@ -152,38 +212,15 @@ Product scope adds:
 - repository-qualified finding traceability; and
 - `product-planning-report/v1` for one evidence-backed improvement plan across the product boundary.
 
-The GitHub App does not trust a PR—or one repository acting alone—to expand related-repository read scope. Product membership is read from trusted **default branches**, and a related repository participates only when it reciprocally declares the same product identity and membership, is under the same owner and visibility, and is accessible through IaaP Guard. Each related repository uses a separate short-lived token restricted to that one repository with `contents:read`.
+The GitHub App does not trust a PR—or one repository acting alone—to expand related-repository read scope. Product membership is read from trusted **default branches**, and a related repository participates only when it reciprocally declares the same product identity and membership, is under the same owner and visibility, and is accessible through IaaP Guard.
 
-In V1 the triggering repository still owns the GitHub Check conclusion; the product result is advisory context. This prevents an unrelated existing issue in another member repository from unexpectedly blocking the current PR.
+In V1 the triggering repository still owns the GitHub Check conclusion; product scope and Evidence Continuity are advisory context rather than hidden new blocking authorities.
 
-See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) for the manifest, reciprocal trust model, snapshot semantics, cross-repository compatibility rule, CLI commands, and product-level planning contract.
+See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) for the trust and product-scope contract.
 
-## Phase 9 GitHub Action
+## Public GitHub App beta
 
-Phase 9 proved a thin composite Action around the same deterministic engine across the six-repository IaaP portfolio.
-
-Pin it to an immutable commit:
-
-```yaml
-permissions:
-  contents: read
-
-steps:
-  - uses: actions/checkout@v7
-  - uses: actions/setup-python@v7
-    with:
-      python-version: '3.12'
-  - id: iaap-guard
-    uses: SAABOLImpactVenture/iaap-guard@<40-character-commit-sha>
-    with:
-      fail-on-failure: 'false'
-```
-
-See `docs/GITHUB-ACTION.md` and `artifacts/phase-9/` for the authority, repeatability, mutation, false-positive, and portfolio evidence.
-
-## Phase 10 public GitHub App beta
-
-Phase 10 adds the smallest public-installation adapter around the proven core.
+The public App remains a small stateless adapter around the deterministic core.
 
 ```text
 GitHub PR event
@@ -194,47 +231,18 @@ X-Hub-Signature-256 verification
     ↓
 Short-lived repository-scoped installation token
     ↓
-Immutable PR-head repository snapshot
+Immutable PR head + trusted PR base snapshots
     ↓
 Existing deterministic IaaP Guard core
     ↓
-scan-result/v1
+scan-result/v1 + evidence-manifest/v1
     ↓
 IaaP Guard / Architecture Check Run
 ```
 
-### Public App event path
-
-```mermaid
-flowchart TB
-  EVENT[GitHub PR event] --> WEBHOOK[Public GitHub App webhook]
-  WEBHOOK --> SIG[X-Hub-Signature-256 verification]
-  SIG --> TOKEN[Short-lived repository-scoped token]
-  TOKEN --> SNAP[Immutable PR-head snapshot]
-  SNAP --> CORE[Deterministic IaaP Guard core]
-  CORE --> SCAN[scan-result/v1]
-  SCAN --> CHECK[IaaP Guard / Architecture Check]
-
-  classDef event fill:#0D2438,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC
-  classDef governance fill:#3A2A0D,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC
-  classDef authority fill:#47270F,stroke:#FB923C,stroke-width:2px,color:#F8FAFC
-  classDef source fill:#1F2937,stroke:#94A3B8,stroke-width:2px,color:#F8FAFC
-  classDef rules fill:#123A24,stroke:#22C55E,stroke-width:3px,color:#F8FAFC
-  classDef evidence fill:#3A1530,stroke:#EC4899,stroke-width:2px,color:#F8FAFC
-  classDef adapter fill:#102D55,stroke:#3B82F6,stroke-width:2px,color:#F8FAFC
-  class EVENT event
-  class WEBHOOK,SIG governance
-  class TOKEN authority
-  class SNAP source
-  class CORE rules
-  class SCAN evidence
-  class CHECK adapter
-  linkStyle default stroke:#7DD3FC,stroke-width:2px
-```
-
 The initial hosting implementation uses **AWS Lambda + Function URL** because the core is already Python and the beta does not require a persistent database. Hosting remains replaceable; it is not part of the rule engine or consumer contract.
 
-The V0 App authority is frozen in `config/github-app-v0.json`:
+The App authority is frozen in `config/github-app-v0.json`:
 
 - Metadata: read;
 - Contents: read;
@@ -245,13 +253,9 @@ The V0 App authority is frozen in `config/github-app-v0.json`:
 - no workflow/administration permissions;
 - no cloud, Kubernetes, Terraform/TFE, or AI credentials.
 
-For each handled event, the installation token is narrowed to the **triggering repository** and discarded after the stateless invocation. The adapter publishes `IaaP Guard / Architecture` using the deterministic core conclusion: `success`, `neutral`, or `failure`.
+See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md) for registration, security, deployment, Check Run, Evidence Continuity, and beta-limit semantics.
 
-When the deterministic scan produces WARNING or FAIL findings, the current beta adapter also appends a compact **Improvement Plan** to the Check. PASS/no-finding and no-relevant-change results do not invent backlog work.
-
-See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check Run, and beta-limit contract.
-
-## V0 principles
+## Product principles
 
 - Product over tooling.
 - Stable consumer contracts.
@@ -260,6 +264,7 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 - Deterministic governance.
 - Human authorization.
 - Evidence first.
+- Evidence continuity is not authorization continuity.
 - One authoritative reconciler.
 - Least privilege.
 - Context-aware analysis rather than naive keyword grep.
@@ -267,30 +272,26 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 
 ## Repository contents
 
-- `docs/PRODUCT.md` — product definition and explicit V0 exclusions.
-- `docs/ARCHITECTURE.md` — deterministic center and adapter boundaries.
-- `docs/RULE-CATALOG.md` — V0 deterministic rule semantics.
+- `docs/PRODUCT.md` — product definition, outcomes, and explicit exclusions.
+- `docs/ARCHITECTURE.md` — deterministic center, evidence-continuity flow, and adapter boundaries.
+- `docs/CORE.md` — implemented deterministic engine plus evidence contract and limitations.
+- `docs/EVIDENCE-CONTINUITY.md` — evidence-manifest and continuity semantics.
+- `docs/PR-BASE-EVIDENCE-CONTINUITY.md` — PR base/head continuity adapter contract.
+- `docs/RULE-CATALOG.md` — deterministic rule semantics.
 - `docs/SCORING.md` — transparent coverage-based maturity model.
-- `docs/CORE.md` — implemented deterministic engine contract and limitations.
 - `docs/PLANNING-REPORT.md` — OKR-to-backlog planning semantics and product boundary.
 - `docs/MULTI-REPOSITORY-PRODUCTS.md` — product membership, cross-repository trust, assessment, and planning semantics.
-- `docs/DOGFOOD.md` — Phase 9 six-repository evidence plan.
-- `docs/GITHUB-ACTION.md` — Phase 9 Action adapter and authority boundary.
-- `docs/GITHUB-APP-BETA.md` — Phase 10 public GitHub App beta contract and deployment guide.
-- `config/github-app-v0.json` — machine-readable App permissions/events contract.
-- `deploy/aws-lambda/template.yaml` — minimal stateless beta runtime deployment.
-- `adr/` — architecture decisions for deterministic-first, context-aware analysis and bounded distribution.
-- `rules/catalog.yaml` — machine-readable V0 rule catalog.
-- `planning/catalog.yaml` — versioned deterministic planning templates.
+- `docs/DOGFOOD.md` — six-repository evidence plan.
+- `docs/GITHUB-ACTION.md` — Action adapter and authority boundary.
+- `docs/GITHUB-APP-BETA.md` — public GitHub App beta contract and deployment guide.
 - `schemas/scan-result.schema.json` — normalized repository result contract.
+- `schemas/evidence-manifest.schema.json` — normalized evidence and continuity contract.
 - `schemas/planning-report.schema.json` — normalized repository improvement-plan contract.
 - `schemas/product-manifest.schema.json` — multi-repository product membership contract.
 - `schemas/product-assessment.schema.json` — normalized product assessment contract.
 - `schemas/product-planning-report.schema.json` — normalized product improvement-plan contract.
-- `fixtures/` — positive and negative architecture cases.
-- `src/iaap_guard/` — deterministic core plus thin GitHub App and product-scope adapters.
-- `tests/` — frozen fixture, engine-invariant, adapter/security, planning, and product-scope tests.
-- `action.yml` — thin GitHub Action dogfood adapter.
+- `src/iaap_guard/` — deterministic core plus thin GitHub App, evidence, planning, and product-scope adapters.
+- `tests/` — frozen fixture, engine-invariant, adapter/security, evidence-continuity, planning, and product-scope tests.
 
 ## Current status
 
@@ -298,6 +299,8 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 **PHASE 9 — Dogfood POC: COMPLETE**  
 **PHASE 10 — Public Installable Beta: IN PROGRESS**  
 **PHASE 11 — Evidence-to-Planning Layer: COMPLETE**  
-**PHASE 12 — Multi-Repository Product Scope: IN PROGRESS**
+**PHASE 12 — Multi-Repository Product Scope: IN PROGRESS**  
+**PHASE 13 — Evidence Continuity Core: COMPLETE**  
+**PHASE 14 — PR-base Evidence Continuity: IN REVIEW**
 
-Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 added the advisory `planning-report/v1` path. Phase 12 adds explicit reciprocal multi-repository product membership, fail-safe product aggregation, bounded cross-repository contract compatibility checks, trusted GitHub federation, and product-level OKR planning without turning related-repository access into broad installation authority.
+Phase 13 established `evidence-manifest/v1`, deterministic prior/current comparison, evidence digests, rule/finding deltas, bounded materiality, and the explicit rule that **Evidence Continuity does not determine authority**. Phase 14 integrates that model into the GitHub App by deriving the trusted baseline from the PR base SHA and publishing continuity context in the existing Architecture Check without changing repository PASS/WARNING/FAIL authority semantics.
