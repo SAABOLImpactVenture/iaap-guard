@@ -95,6 +95,41 @@ class PlanningReportTests(unittest.TestCase):
         self.assertEqual(len(objective["epics"][0]["evidence"]), 2)
         self.assertTrue(any(kr["metric"] == "blockingGuardFindings" for kr in objective["keyResults"]))
 
+    def test_warning_epic_does_not_map_to_blocking_fail_kr(self):
+        findings = [
+            {
+                "ruleId": "IAP-A002",
+                "result": "FAIL",
+                "dimension": "Governance",
+                "componentContext": "ai-authority",
+                "path": "policy/authority.yaml",
+                "evidence": "automation can bypass accountable human approval",
+                "recommendation": "Require accountable human approval.",
+                "scoring": True,
+                "experimental": False,
+            },
+            {
+                "ruleId": "IAP-G001",
+                "result": "WARNING",
+                "dimension": "Governance",
+                "componentContext": "evidence",
+                "path": "product/schema.yaml",
+                "evidence": "no deterministic product-boundary validation was detected",
+                "recommendation": "Add deterministic product-boundary validation.",
+                "scoring": True,
+                "experimental": False,
+            },
+        ]
+        report = build_planning_report(_scan_result(findings))
+        objective = report["objectives"][0]
+        blocking_kr = next(
+            item["id"] for item in objective["keyResults"] if item["metric"] == "blockingGuardFindings"
+        )
+        fail_epic = next(item for item in objective["epics"] if item["ruleId"] == "IAP-A002")
+        warning_epic = next(item for item in objective["epics"] if item["ruleId"] == "IAP-G001")
+        self.assertIn(blocking_kr, fail_epic["keyResultIds"])
+        self.assertNotIn(blocking_kr, warning_epic["keyResultIds"])
+
     def test_no_findings_produces_no_backlog(self):
         result = _scan_result([])
         result["conclusion"] = "success"
