@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 from .planning import build_planning_report, render_planning_markdown
+from .product import build_product_assessment, load_product_manifest, load_scan_results, render_product_markdown
+from .product_planning import build_product_planning_report, render_product_planning_markdown
 from .scanner import scan_path
 
 
@@ -46,6 +48,12 @@ def _add_scan_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--output", type=Path)
 
 
+def _add_product_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("manifest", type=Path, help="iaap-product/v1 YAML manifest")
+    parser.add_argument("results", nargs="+", type=Path, help="member scan-result/v1 JSON files")
+    parser.add_argument("--output", type=Path)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Deterministic Infrastructure-as-a-Product architecture guard")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -61,11 +69,54 @@ def build_parser() -> argparse.ArgumentParser:
     _add_scan_arguments(plan)
     plan.add_argument("--planning-catalog", type=Path)
     plan.add_argument("--format", choices=("markdown", "json"), default="markdown")
+
+    product_assess = subparsers.add_parser(
+        "product-assess",
+        help="aggregate registered repository scan evidence into one product assessment",
+    )
+    _add_product_arguments(product_assess)
+    product_assess.add_argument("--format", choices=("markdown", "json"), default="markdown")
+
+    product_plan = subparsers.add_parser(
+        "product-plan",
+        help="generate a product-level OKR improvement plan from registered repository evidence",
+    )
+    _add_product_arguments(product_plan)
+    product_plan.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser
+
+
+def _write_or_print(rendered: str, output: Path | None) -> None:
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding="utf-8")
+    else:
+        print(rendered, end="")
 
 
 def main() -> int:
     args = build_parser().parse_args()
+
+    if args.command in {"product-assess", "product-plan"}:
+        manifest = load_product_manifest(args.manifest)
+        results = load_scan_results(args.results)
+        assessment = build_product_assessment(manifest, results)
+        if args.command == "product-assess":
+            rendered = (
+                json.dumps(assessment, indent=2, sort_keys=False) + "\n"
+                if args.format == "json"
+                else render_product_markdown(assessment)
+            )
+        else:
+            report = build_product_planning_report(assessment)
+            rendered = (
+                json.dumps(report, indent=2, sort_keys=False) + "\n"
+                if args.format == "json"
+                else render_product_planning_markdown(report)
+            )
+        _write_or_print(rendered, args.output)
+        return 1 if assessment["conclusion"] in {"failure", "incomplete"} else 0
+
     result = scan_path(
         args.target,
         repository=args.repository,
@@ -84,11 +135,7 @@ def main() -> int:
             else render_planning_markdown(report)
         )
 
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered, encoding="utf-8")
-    else:
-        print(rendered, end="")
+    _write_or_print(rendered, args.output)
     return 1 if result["conclusion"] == "failure" else 0
 
 
