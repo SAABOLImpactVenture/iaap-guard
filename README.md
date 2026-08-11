@@ -126,6 +126,38 @@ PYTHONPATH=src python3 -m iaap_guard.cli plan . \
 
 Use `--format json` for the normalized `planning-report/v1` contract. See [`docs/PLANNING-REPORT.md`](docs/PLANNING-REPORT.md) for the planning semantics and product boundary.
 
+## One product, multiple repositories
+
+Infrastructure products do not have to fit inside one repository. A product contract, storefront, control plane, governance policy, evidence, and integration tests can remain independently owned while still forming **one logical infrastructure product**.
+
+IaaP Guard can register that boundary with a trusted `.iaap/product.yaml` and produce both repository-level and product-level results:
+
+```text
+platform-contracts ─┐
+backstage-storefront ├──→ IaaP Product Assessment
+crossplane-control  ┤        ↓
+platform-policies   ┤   Product Improvement Plan
+platform-evidence  ─┘        ↓
+                     OKRs → Epics → Features → Stories → Candidate Tasks
+```
+
+Product scope adds:
+
+- `iaap-product/v1` membership and role metadata;
+- `product-assessment/v1` across registered member repositories;
+- aggregate dimension coverage plus the weakest-member score;
+- **INCOMPLETE** when required repository evidence is unavailable;
+- fail-safe semantics so a member FAIL cannot be averaged away;
+- cross-repository consumer/canonical contract compatibility checks;
+- repository-qualified finding traceability; and
+- `product-planning-report/v1` for one evidence-backed improvement plan across the product boundary.
+
+The GitHub App does not trust a PR—or one repository acting alone—to expand related-repository read scope. Product membership is read from trusted **default branches**, and a related repository participates only when it reciprocally declares the same product identity and membership, is under the same owner and visibility, and is accessible through IaaP Guard. Each related repository uses a separate short-lived token restricted to that one repository with `contents:read`.
+
+In V1 the triggering repository still owns the GitHub Check conclusion; the product result is advisory context. This prevents an unrelated existing issue in another member repository from unexpectedly blocking the current PR.
+
+See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) for the manifest, reciprocal trust model, snapshot semantics, cross-repository compatibility rule, CLI commands, and product-level planning contract.
+
 ## Phase 9 GitHub Action
 
 Phase 9 proved a thin composite Action around the same deterministic engine across the six-repository IaaP portfolio.
@@ -241,6 +273,7 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 - `docs/SCORING.md` — transparent coverage-based maturity model.
 - `docs/CORE.md` — implemented deterministic engine contract and limitations.
 - `docs/PLANNING-REPORT.md` — OKR-to-backlog planning semantics and product boundary.
+- `docs/MULTI-REPOSITORY-PRODUCTS.md` — product membership, cross-repository trust, assessment, and planning semantics.
 - `docs/DOGFOOD.md` — Phase 9 six-repository evidence plan.
 - `docs/GITHUB-ACTION.md` — Phase 9 Action adapter and authority boundary.
 - `docs/GITHUB-APP-BETA.md` — Phase 10 public GitHub App beta contract and deployment guide.
@@ -249,11 +282,14 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 - `adr/` — architecture decisions for deterministic-first, context-aware analysis and bounded distribution.
 - `rules/catalog.yaml` — machine-readable V0 rule catalog.
 - `planning/catalog.yaml` — versioned deterministic planning templates.
-- `schemas/scan-result.schema.json` — normalized result contract.
-- `schemas/planning-report.schema.json` — normalized improvement-plan contract.
+- `schemas/scan-result.schema.json` — normalized repository result contract.
+- `schemas/planning-report.schema.json` — normalized repository improvement-plan contract.
+- `schemas/product-manifest.schema.json` — multi-repository product membership contract.
+- `schemas/product-assessment.schema.json` — normalized product assessment contract.
+- `schemas/product-planning-report.schema.json` — normalized product improvement-plan contract.
 - `fixtures/` — positive and negative architecture cases.
-- `src/iaap_guard/` — deterministic core plus thin GitHub App adapter.
-- `tests/` — frozen fixture, engine-invariant, Phase 9 evidence, Phase 10 adapter/security, and planning-report tests.
+- `src/iaap_guard/` — deterministic core plus thin GitHub App and product-scope adapters.
+- `tests/` — frozen fixture, engine-invariant, adapter/security, planning, and product-scope tests.
 - `action.yml` — thin GitHub Action dogfood adapter.
 
 ## Current status
@@ -261,6 +297,7 @@ See `docs/GITHUB-APP-BETA.md` for the registration, security, deployment, Check 
 **PHASE 8 — Deterministic Core: COMPLETE**  
 **PHASE 9 — Dogfood POC: COMPLETE**  
 **PHASE 10 — Public Installable Beta: IN PROGRESS**  
-**PHASE 11 — Evidence-to-Planning Layer: COMPLETE**
+**PHASE 11 — Evidence-to-Planning Layer: COMPLETE**  
+**PHASE 12 — Multi-Repository Product Scope: IN PROGRESS**
 
-Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 adds the advisory `planning-report/v1` path that translates findings into measurable OKRs and candidate backlog structure while preserving Guard's non-execution boundary.
+Phase 9 proved the deterministic engine against the actual six-repository portfolio with 6/6 accepted baselines at 100/100, zero final findings, complete critical-mutation coverage, and repeatable normalized results. Phase 10 is proving public/private GitHub App installation and GitHub Check delivery without introducing a SaaS database, PATs, or customer infrastructure credentials. Phase 11 added the advisory `planning-report/v1` path. Phase 12 adds explicit reciprocal multi-repository product membership, fail-safe product aggregation, bounded cross-repository contract compatibility checks, trusted GitHub federation, and product-level OKR planning without turning related-repository access into broad installation authority.

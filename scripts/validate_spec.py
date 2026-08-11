@@ -12,6 +12,9 @@ CATALOG = ROOT / "rules/catalog.yaml"
 RESULT_SCHEMA = ROOT / "schemas/scan-result.schema.json"
 PLANNING_CATALOG = ROOT / "planning/catalog.yaml"
 PLANNING_SCHEMA = ROOT / "schemas/planning-report.schema.json"
+PRODUCT_MANIFEST_SCHEMA = ROOT / "schemas/product-manifest.schema.json"
+PRODUCT_ASSESSMENT_SCHEMA = ROOT / "schemas/product-assessment.schema.json"
+PRODUCT_PLANNING_SCHEMA = ROOT / "schemas/product-planning-report.schema.json"
 EXPECTED = ROOT / "fixtures/expected-results.yaml"
 
 
@@ -29,6 +32,9 @@ def validate_machine_readable_files() -> None:
     expected = load_yaml(EXPECTED)
     result_schema = json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))
     planning_schema = json.loads(PLANNING_SCHEMA.read_text(encoding="utf-8"))
+    product_manifest_schema = json.loads(PRODUCT_MANIFEST_SCHEMA.read_text(encoding="utf-8"))
+    product_assessment_schema = json.loads(PRODUCT_ASSESSMENT_SCHEMA.read_text(encoding="utf-8"))
+    product_planning_schema = json.loads(PRODUCT_PLANNING_SCHEMA.read_text(encoding="utf-8"))
 
     if catalog.get("catalogVersion") != "iaap-guard/v0.1.2":
         fail("unexpected rule catalog version")
@@ -111,7 +117,13 @@ def validate_machine_readable_files() -> None:
     for path in (ROOT / "fixtures").rglob("*.json"):
         json.loads(path.read_text(encoding="utf-8"))
 
-    for schema in (result_schema, planning_schema):
+    for schema in (
+        result_schema,
+        planning_schema,
+        product_manifest_schema,
+        product_assessment_schema,
+        product_planning_schema,
+    ):
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
 
@@ -143,10 +155,17 @@ def validate_machine_readable_files() -> None:
     if set(planning_schema.get("required", [])) != required_planning_fields:
         fail("planning-report schema required fields diverged from the V1 contract")
 
+    if product_manifest_schema.get("properties", {}).get("schemaVersion", {}).get("const") != "iaap-product/v1":
+        fail("unexpected product manifest schema version")
+    if product_assessment_schema.get("properties", {}).get("schemaVersion", {}).get("const") != "product-assessment/v1":
+        fail("unexpected product assessment schema version")
+    if product_planning_schema.get("properties", {}).get("schemaVersion", {}).get("const") != "product-planning-report/v1":
+        fail("unexpected product planning schema version")
+
     print(
         f"specification validation passed: {len(rules)} rules, "
         f"{len(case_paths)} fixtures, {len(required_fail_fixtures)} critical FAIL rules, "
-        f"{len(planning_rules)} planning templates"
+        f"{len(planning_rules)} planning templates, 3 product-scope schemas"
     )
 
 

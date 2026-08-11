@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saabol.example/schemas/iaap-guard/product-assessment.schema.json",
+  "title": "IaaP Guard Product Assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "product",
+    "evidenceRevision",
+    "ruleCatalogVersion",
+    "scoringModelVersion",
+    "acquisition",
+    "relationshipEvaluation",
+    "members",
+    "completeness",
+    "dimensionScores",
+    "overallScore",
+    "minimumMemberScore",
+    "conclusion",
+    "findings",
+    "boundary"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "product-assessment/v1"},
+    "product": {
+      "type": "object",
+      "required": ["id", "name", "owner"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "owner": {"type": ["string", "null"]}
+      }
+    },
+    "evidenceRevision": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ruleCatalogVersion": {"type": ["string", "null"]},
+    "scoringModelVersion": {"type": ["string", "null"]},
+    "acquisition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "relatedRepositoryContentRead", "reciprocalMembershipRequired"],
+      "properties": {
+        "mode": {"enum": ["provided-evidence", "trusted-github-federation"]},
+        "relatedRepositoryContentRead": {"type": "boolean"},
+        "reciprocalMembershipRequired": {"type": "boolean"}
+      }
+    },
+    "relationshipEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "rules", "reason"],
+      "properties": {
+        "status": {"enum": ["not-evaluated", "complete", "incomplete"]},
+        "rules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "roles", "required", "primary", "present", "revision", "overallScore", "conclusion", "findingCount"],
+        "properties": {
+          "name": {"type": "string"},
+          "roles": {"type": "array", "items": {"type": "string"}},
+          "required": {"type": "boolean"},
+          "primary": {"type": "boolean"},
+          "present": {"type": "boolean"},
+          "revision": {"type": ["object", "null"]},
+          "overallScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
+          "conclusion": {"enum": ["success", "neutral", "failure", "incomplete"]},
+          "findingCount": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "required": ["registered", "present", "missingRequired", "complete"],
+      "properties": {
+        "registered": {"type": "integer", "minimum": 1},
+        "present": {"type": "integer", "minimum": 0},
+        "missingRequired": {"type": "array", "items": {"type": "string"}},
+        "complete": {"type": "boolean"}
+      }
+    },
+    "dimensionScores": {"type": "array", "items": {"type": "object"}},
+    "overallScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
+    "minimumMemberScore": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
+    "conclusion": {"enum": ["success", "neutral", "failure", "incomplete"]},
+    "findings": {"type": "array", "items": {"type": "object"}},
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["advisoryProductScope", "doesNotExpandGitHubAppPermissions", "memberFailureCannotBeAveragedAway"],
+      "properties": {
+        "advisoryProductScope": {"const": true},
+        "doesNotExpandGitHubAppPermissions": {"const": true},
+        "memberFailureCannotBeAveragedAway": {"const": true}
+      }
+    }
+  }
+}
