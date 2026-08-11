@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saabol.example/schemas/iaap-guard/planning-report.schema.json",
+  "title": "IaaP Guard Planning Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planningCatalogVersion",
+    "status",
+    "source",
+    "totals",
+    "objectives",
+    "boundary"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "planning-report/v1"},
+    "planningCatalogVersion": {"type": "string", "minLength": 1},
+    "status": {"enum": ["improvement-required", "no-current-findings"]},
+    "source": {
+      "type": "object",
+      "required": [
+        "scanSchemaVersion",
+        "ruleCatalogVersion",
+        "scoringModelVersion",
+        "repository",
+        "revision",
+        "conclusion",
+        "overallScore",
+        "findingCount"
+      ],
+      "properties": {
+        "scanSchemaVersion": {"type": ["string", "null"]},
+        "ruleCatalogVersion": {"type": ["string", "null"]},
+        "scoringModelVersion": {"type": ["string", "null"]},
+        "repository": {"type": ["object", "null"]},
+        "revision": {"type": ["object", "null"]},
+        "conclusion": {"type": ["string", "null"]},
+        "overallScore": {"type": ["number", "null"]},
+        "findingCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objectives", "keyResults", "epics", "features", "userStories", "candidateTasks"],
+      "properties": {
+        "objectives": {"type": "integer", "minimum": 0},
+        "keyResults": {"type": "integer", "minimum": 0},
+        "epics": {"type": "integer", "minimum": 0},
+        "features": {"type": "integer", "minimum": 0},
+        "userStories": {"type": "integer", "minimum": 0},
+        "candidateTasks": {"type": "integer", "minimum": 0}
+      }
+    },
+    "objectives": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/objective"}
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["advisory", "candidateBacklogOnly", "doesNotExecuteWork", "doesNotManageSprints"],
+      "properties": {
+        "advisory": {"const": true},
+        "candidateBacklogOnly": {"const": true},
+        "doesNotExecuteWork": {"const": true},
+        "doesNotManageSprints": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "dimension", "title", "baselineScore", "targetScore", "keyResults", "epics"],
+      "properties": {
+        "id": {"type": "string"},
+        "dimension": {"type": "string"},
+        "title": {"type": "string"},
+        "baselineScore": {"type": ["number", "null"]},
+        "targetScore": {"type": ["number", "null"]},
+        "keyResults": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/keyResult"}
+        },
+        "epics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/epic"}
+        }
+      }
+    },
+    "keyResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "metric", "baseline", "target"],
+      "properties": {
+        "id": {"type": "string"},
+        "statement": {"type": "string"},
+        "metric": {"type": "string"},
+        "baseline": {"type": "number"},
+        "target": {"type": "number"}
+      }
+    },
+    "epic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ruleId", "title", "outcome", "keyResultIds", "findingCount", "experimental", "evidence", "features"],
+      "properties": {
+        "id": {"type": "string"},
+        "ruleId": {"type": "string"},
+        "title": {"type": "string"},
+        "outcome": {"type": "string"},
+        "keyResultIds": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "findingCount": {"type": "integer", "minimum": 1},
+        "experimental": {"type": "boolean"},
+        "evidence": {"type": "array", "items": {"type": "object"}, "minItems": 1},
+        "features": {"type": "array", "items": {"$ref": "#/$defs/feature"}, "minItems": 1}
+      }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "userStories"],
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "userStories": {"type": "array", "items": {"$ref": "#/$defs/userStory"}, "minItems": 1}
+      }
+    },
+    "userStory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "candidate", "acceptanceEvidence", "candidateTasks"],
+      "properties": {
+        "id": {"type": "string"},
+        "statement": {"type": "string"},
+        "candidate": {"const": true},
+        "acceptanceEvidence": {"type": "array", "items": {"type": "string"}},
+        "candidateTasks": {"type": "array", "items": {"$ref": "#/$defs/task"}}
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "candidate"],
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "candidate": {"const": true}
+      }
+    }
+  }
+}
