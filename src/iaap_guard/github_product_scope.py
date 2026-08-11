@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import base64
+import shutil
 import tempfile
 import urllib.parse
 from pathlib import Path
 from typing import Any, Callable
 
-import yaml
-
 from .product import build_product_assessment, load_product_manifest
 from .product_planning import build_product_planning_report
+from .product_relationships import apply_relationship_evidence
 from .scanner import scan_path
 
 PRODUCT_MANIFEST_PATH = ".iaap/product.yaml"
@@ -45,8 +45,10 @@ def _trusted_manifest(api: Any, token: str, repository: str) -> tuple[dict[str, 
             f"/repos/{_encoded_repo(repository)}/contents/{PRODUCT_MANIFEST_PATH}?ref={encoded_ref}",
             token=token,
         )
-    except RuntimeError:
-        return None, metadata
+    except RuntimeError as exc:
+        if "HTTP 404" in str(exc):
+            return None, metadata
+        raise
     if not isinstance(response, dict) or response.get("type") != "file":
         return None, metadata
     content = response.get("content")
@@ -109,12 +111,24 @@ def _default_revision(api: Any, token: str, repository: str) -> tuple[str, str, 
     return default_branch, sha, metadata
 
 
+def _member_destination(bundle: Path, repository: str) -> Path:
+    owner, name = repository.split("/", 1)
+    return bundle / "members" / owner / name
+
+
+def _copy_member(bundle: Path, repository: str, root: Path) -> None:
+    destination = _member_destination(bundle, repository)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(root, destination, dirs_exist_ok=True)
+
+
 def evaluate_trusted_product_scope(
     *,
     api: Any,
     app_jwt: str,
     trigger_token: str,
     trigger_repository: str,
+    trigger_root: Path,
     trigger_result: dict[str, Any],
     extract_archive: Callable[[bytes, Path], Path],
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
@@ -126,7 +140,8 @@ def evaluate_trusted_product_scope(
     - related repositories must share the same owner and visibility;
     - every related token is scoped to exactly one repository and contents:read;
     - inaccessible required members become INCOMPLETE rather than being ignored;
-    - related repositories are scanned at immutable default-branch SHAs.
+    - related repositories are scanned at immutable default-branch SHAs;
+    - cross-repo relationship rules run only after members are safely assembled.
     """
 
     manifest, trigger_metadata = _trusted_manifest(api, trigger_token, trigger_repository)
@@ -146,38 +161,51 @@ def evaluate_trusted_product_scope(
         trigger_visibility = "private" if trigger_metadata.get("private") else "public"
 
     results = [trigger_result]
-    for entry in repositories:
-        repository = entry["name"]
-        if repository == trigger_repository:
-            continue
-        if repository.split("/", 1)[0] != trigger_owner:
-            # V1 deliberately refuses cross-owner federation. Missing required
-            # evidence will make the product INCOMPLETE without reading it.
-            continue
-        try:
-            token = _related_repository_token(api, app_jwt, repository)
-            default_branch, sha, metadata = _default_revision(api, token, repository)
-            visibility = metadata.get("visibility")
-            if not isinstance(visibility, str):
-                visibility = "private" if metadata.get("private") else "public"
-            if visibility != trigger_visibility:
-                # Prevent product Check output from becoming a visibility bridge.
-                continue
-            archive = api.repository_tarball(token, repository, sha)
-            with tempfile.TemporaryDirectory(prefix="iaap-guard-related-") as tmp:
-                root = extract_archive(archive, Path(tmp))
-                result = scan_path(
-                    root,
-                    repository=repository,
-                    revision=sha,
-                    ref=f"refs/heads/{default_branch}",
-                )
-            results.append(result)
-        except RuntimeError:
-            # Fail closed at the product layer. Required members become
-            # INCOMPLETE; optional members remain visible as absent evidence.
-            continue
+    with tempfile.TemporaryDirectory(prefix="iaap-guard-product-bundle-") as bundle_tmp:
+        bundle = Path(bundle_tmp)
+        _copy_member(bundle, trigger_repository, trigger_root)
 
-    assessment = build_product_assessment(manifest, results)
+        for entry in repositories:
+            repository = entry["name"]
+            if repository == trigger_repository:
+                continue
+            if repository.split("/", 1)[0] != trigger_owner:
+                # V1 deliberately refuses cross-owner federation. Missing required
+                # evidence will make the product INCOMPLETE without reading it.
+                continue
+            try:
+                token = _related_repository_token(api, app_jwt, repository)
+                default_branch, sha, metadata = _default_revision(api, token, repository)
+                visibility = metadata.get("visibility")
+                if not isinstance(visibility, str):
+                    visibility = "private" if metadata.get("private") else "public"
+                if visibility != trigger_visibility:
+                    # Prevent product Check output from becoming a visibility bridge.
+                    continue
+                archive = api.repository_tarball(token, repository, sha)
+                with tempfile.TemporaryDirectory(prefix="iaap-guard-related-") as tmp:
+                    root = extract_archive(archive, Path(tmp))
+                    result = scan_path(
+                        root,
+                        repository=repository,
+                        revision=sha,
+                        ref=f"refs/heads/{default_branch}",
+                    )
+                    _copy_member(bundle, repository, root)
+                results.append(result)
+            except RuntimeError:
+                # Fail closed at the product layer. Required members become
+                # INCOMPLETE; optional members remain visible as absent evidence.
+                continue
+
+        assessment = build_product_assessment(manifest, results)
+        relationship_scan = scan_path(
+            bundle,
+            repository=f"product:{manifest['product']['id']}",
+            revision=assessment["evidenceRevision"][:40],
+            ref="iaap-product/v1",
+        )
+        assessment = apply_relationship_evidence(assessment, relationship_scan)
+
     plan = build_product_planning_report(assessment)
     return assessment, plan
