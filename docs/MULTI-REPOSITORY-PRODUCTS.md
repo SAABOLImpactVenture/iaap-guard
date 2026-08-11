@@ -135,6 +135,19 @@ The finding remains traceable to the member repository and file that exposed the
 
 V1 does **not** blindly rerun every repository rule across the combined bundle. A control is promoted to product-relationship scope only when its semantics genuinely support cross-repository evaluation. That avoids double-counting repository controls or silently changing existing rule meaning.
 
+### Bounded relationship evidence
+
+Member repositories are still scanned independently from their complete bounded snapshots. Guard does **not**, however, keep every extracted member repository in a second shared copy just to evaluate relationships.
+
+For the V1 `IAP-C001` relationship pass, Guard builds a separate temporary derivative containing only artifacts already classified as `consumer-contract` or `experience`. That relationship bundle has a cumulative **20 MB** limit across the logical product.
+
+If required member evidence is unavailable, the relevant artifacts cannot be copied safely, or the relationship bundle exceeds its bound, Guard records relationship evaluation as **INCOMPLETE** and adds product evidence finding `IAP-PR002`. It does not crash the webhook, omit the relationship silently, or present an unevaluated relationship as green.
+
+The product assessment also records its evidence-acquisition mode so machine consumers can distinguish:
+
+- `provided-evidence` — member `scan-result/v1` documents were supplied to the CLI and no related repository content was fetched; and
+- `trusted-github-federation` — the GitHub App read reciprocally registered member repositories using bounded repository-scoped access.
+
 ## Product-level OKR improvement plan
 
 A `product-assessment/v1` can feed `product-planning-report/v1`:
