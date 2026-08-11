@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-RELATIONSHIP_RULE_IDS = {"IAP-C001", "IAP-CX01"}
+RELATIONSHIP_RULE_IDS = {"IAP-C001"}
 CONCLUSION_ORDER = {"success": 0, "neutral": 1, "failure": 2, "incomplete": 3}
 
 
@@ -25,12 +25,12 @@ def apply_relationship_evidence(
     assessment: dict[str, Any],
     relationship_scan: dict[str, Any],
 ) -> dict[str, Any]:
-    """Overlay rules that become meaningful only when member artifacts coexist.
+    """Overlay controls whose current semantics genuinely require member coexistence.
 
-    V1 deliberately limits this pass to existing rules with genuine cross-artifact
-    semantics: consumer/canonical contract compatibility (IAP-C001) and
-    authoritative reconciler ownership (IAP-CX01). Other rules remain owned by
-    their member repository scans to avoid double-counting the same control.
+    V1 deliberately limits this pass to IAP-C001: canonical product-contract and
+    consumer/storefront constraint compatibility. Other controls remain owned by
+    member repository scans until their cross-repository semantics are explicitly
+    versioned rather than inferred or double-counted.
     """
 
     output = deepcopy(assessment)
