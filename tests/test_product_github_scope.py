@@ -3,7 +3,9 @@ from __future__ import annotations
 import base64
 import io
 import tarfile
+import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
@@ -20,6 +22,18 @@ def _tarball(entries: dict[str, bytes]) -> bytes:
             info.size = len(body)
             tar.addfile(info, io.BytesIO(body))
     return data.getvalue()
+
+
+@contextmanager
+def _trigger_root(files: dict[str, str] | None = None):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        source = files or {"README.md": "# Trigger repository\n"}
+        for relative, text in source.items():
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        yield root
 
 
 def _trigger_result():
@@ -45,21 +59,26 @@ def _trigger_result():
     }
 
 
-def _manifest(related="example/control-plane"):
+def _manifest(related="example/control-plane", roles=None):
     return {
         "schemaVersion": "iaap-product/v1",
         "product": {"id": "cloud-foundation", "name": "Cloud Foundation", "owner": "platform-team"},
         "repositories": [
             {"name": "example/contracts", "roles": ["product-contract"], "required": True, "primary": True},
-            {"name": related, "roles": ["control-plane", "evidence"], "required": True},
+            {"name": related, "roles": roles or ["control-plane", "evidence"], "required": True},
         ],
     }
 
 
 class _ProductApi:
-    def __init__(self, manifest, *, related_visibility="private"):
+    def __init__(self, manifest, *, related_visibility="private", related_entries=None):
         self.manifest = manifest
         self.related_visibility = related_visibility
+        self.related_repository = manifest["repositories"][1]["name"]
+        self.related_entries = related_entries or {
+            "repo-related/README.md": b"# Related control plane\n",
+            "repo-related/tests/test_evidence.py": b"# deterministic validation evidence\n",
+        }
         self.calls = []
         self.token_bodies = []
         self.tarball_calls = []
@@ -71,38 +90,39 @@ class _ProductApi:
         if path.startswith("/repos/example/contracts/contents/.iaap/product.yaml?ref="):
             content = yaml.safe_dump(self.manifest, sort_keys=False).encode("utf-8")
             return {"type": "file", "encoding": "base64", "content": base64.b64encode(content).decode("ascii")}
-        if path == "/repos/example/control-plane/installation":
+        if path == f"/repos/{self.related_repository}/installation":
             return {"id": 77}
         if path == "/app/installations/77/access_tokens":
             self.token_bodies.append(body)
             return {"token": "related-token"}
-        if path == "/repos/example/control-plane":
+        if path == f"/repos/{self.related_repository}":
             return {"default_branch": "main", "visibility": self.related_visibility, "private": self.related_visibility != "public"}
-        if path == "/repos/example/control-plane/commits/main":
+        if path == f"/repos/{self.related_repository}/commits/main":
             return {"sha": "b" * 40}
         raise RuntimeError(f"unexpected request: {method} {path}")
 
     def repository_tarball(self, token, repository, revision):
         self.tarball_calls.append((token, repository, revision))
-        return _tarball(
-            {
-                "repo-related/README.md": b"# Related control plane\n",
-                "repo-related/tests/test_evidence.py": b"# deterministic validation evidence\n",
-            }
+        return _tarball(self.related_entries)
+
+
+def _evaluate(api):
+    with _trigger_root() as root:
+        return evaluate_trusted_product_scope(
+            api=api,
+            app_jwt="app-jwt",
+            trigger_token="trigger-token",
+            trigger_repository="example/contracts",
+            trigger_root=root,
+            trigger_result=_trigger_result(),
+            extract_archive=_safe_extract_tarball,
         )
 
 
 class ProductGitHubScopeTests(unittest.TestCase):
     def test_trusted_default_branch_manifest_drives_related_repo_scope(self):
         api = _ProductApi(_manifest())
-        scope = evaluate_trusted_product_scope(
-            api=api,
-            app_jwt="app-jwt",
-            trigger_token="trigger-token",
-            trigger_repository="example/contracts",
-            trigger_result=_trigger_result(),
-            extract_archive=_safe_extract_tarball,
-        )
+        scope = _evaluate(api)
         self.assertIsNotNone(scope)
         assessment, plan = scope
         self.assertTrue(assessment["completeness"]["complete"])
@@ -114,14 +134,7 @@ class ProductGitHubScopeTests(unittest.TestCase):
 
     def test_related_token_is_one_repo_and_contents_read_only(self):
         api = _ProductApi(_manifest())
-        evaluate_trusted_product_scope(
-            api=api,
-            app_jwt="app-jwt",
-            trigger_token="trigger-token",
-            trigger_repository="example/contracts",
-            trigger_result=_trigger_result(),
-            extract_archive=_safe_extract_tarball,
-        )
+        _evaluate(api)
         self.assertEqual(
             api.token_bodies,
             [{"repositories": ["control-plane"], "permissions": {"contents": "read"}}],
@@ -130,30 +143,69 @@ class ProductGitHubScopeTests(unittest.TestCase):
 
     def test_cross_owner_repository_is_not_read_and_product_is_incomplete(self):
         api = _ProductApi(_manifest(related="other/control-plane"))
-        assessment, _ = evaluate_trusted_product_scope(
-            api=api,
-            app_jwt="app-jwt",
-            trigger_token="trigger-token",
-            trigger_repository="example/contracts",
-            trigger_result=_trigger_result(),
-            extract_archive=_safe_extract_tarball,
-        )
+        assessment, _ = _evaluate(api)
         self.assertEqual(assessment["conclusion"], "incomplete")
         self.assertEqual(assessment["completeness"]["missingRequired"], ["other/control-plane"])
         self.assertFalse(any("other/control-plane/installation" in call[1] for call in api.calls))
 
     def test_visibility_mismatch_does_not_become_a_data_bridge(self):
         api = _ProductApi(_manifest(), related_visibility="public")
-        assessment, _ = evaluate_trusted_product_scope(
-            api=api,
-            app_jwt="app-jwt",
-            trigger_token="trigger-token",
-            trigger_repository="example/contracts",
-            trigger_result=_trigger_result(),
-            extract_archive=_safe_extract_tarball,
-        )
+        assessment, _ = _evaluate(api)
         self.assertEqual(assessment["conclusion"], "incomplete")
         self.assertEqual(api.tarball_calls, [])
+
+    def test_cross_repo_contract_mismatch_becomes_product_relationship_finding(self):
+        manifest = _manifest(related="example/storefront", roles=["experience"])
+        storefront = b"""apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: cloud-foundation
+spec:
+  parameters:
+    - title: Product request
+      required: [owner, cloud]
+      properties:
+        owner:
+          type: string
+        cloud:
+          type: string
+          enum: [aws, azure]
+"""
+        api = _ProductApi(
+            manifest,
+            related_entries={
+                "repo-related/template.yaml": storefront,
+                "repo-related/tests/test_contract.py": b"# deterministic contract validation\n",
+            },
+        )
+        canonical = """apiVersion: platform.example.org/v1alpha1
+kind: InfrastructureProductSchema
+metadata:
+  name: cloud-foundation
+spec:
+  required: [owner, cloud]
+  properties:
+    owner:
+      type: string
+    cloud:
+      type: string
+      enum: [aws, gcp]
+"""
+        with _trigger_root({"product.yaml": canonical, "tests/test_contract.py": "# deterministic contract validation\n"}) as root:
+            assessment, plan = evaluate_trusted_product_scope(
+                api=api,
+                app_jwt="app-jwt",
+                trigger_token="trigger-token",
+                trigger_repository="example/contracts",
+                trigger_root=root,
+                trigger_result=_trigger_result(),
+                extract_archive=_safe_extract_tarball,
+            )
+        compatibility = [item for item in assessment["findings"] if item["ruleId"] == "IAP-C001"]
+        self.assertEqual(len(compatibility), 1)
+        self.assertEqual(compatibility[0]["repository"], "example/storefront")
+        self.assertIn("azure", compatibility[0]["evidence"])
+        self.assertTrue(any(epic["ruleId"] == "IAP-C001" for objective in plan["objectives"] for epic in objective["epics"]))
 
 
 if __name__ == "__main__":
