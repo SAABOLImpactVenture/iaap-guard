@@ -30,7 +30,7 @@ rules:
     outcome: Consumers request product capabilities without selecting provider, workspace, module, or implementation topology.
     feature: Stable implementation-independent product contract
     story:
-      actor: application team
+      actor: platform consumer
       want: request infrastructure by product capability instead of provider implementation details
       soThat: the consumer contract remains stable when the platform implementation changes
     acceptanceEvidence:
@@ -47,7 +47,7 @@ rules:
     outcome: Product teams own deletion, orphaning, retention, and equivalent infrastructure lifecycle policy.
     feature: Product-owned lifecycle policy
     story:
-      actor: application team
+      actor: platform consumer
       want: consume a product with safe lifecycle behavior already defined
       soThat: I do not need to understand or control implementation lifecycle machinery
     acceptanceEvidence:
@@ -132,7 +132,7 @@ rules:
     outcome: Infrastructure implementation is consumed through a stable product contract rather than implementation primitives.
     feature: Canonical infrastructure product API
     story:
-      actor: application team
+      actor: platform consumer
       want: a stable product contract for the infrastructure capability
       soThat: I can consume outcomes without understanding the underlying implementation
     acceptanceEvidence:
