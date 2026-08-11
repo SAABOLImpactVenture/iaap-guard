@@ -16,7 +16,8 @@ from .github_app import (
     target_from_pull_request,
     target_from_rerequest,
 )
-from .github_beta_runtime import BetaGitHubApi, handle_beta_github_event, render_beta_check_output
+from .github_beta_runtime import BetaGitHubApi, render_beta_check_output
+from .github_evidence_runtime import append_evidence_output, handle_evidence_aware_event
 from .github_product_scope import evaluate_trusted_product_scope
 from .product import render_product_markdown
 from .product_planning import render_product_planning_markdown
@@ -77,9 +78,8 @@ def _replace_check_output(
         "name": CHECK_NAME,
         "external_id": target.external_id,
         "status": "completed",
-        # Product scope is advisory in V1. Repository semantics continue to own
-        # the Check conclusion so a related-repo issue cannot unexpectedly turn
-        # an unrelated PR into a blocking failure.
+        # Product scope and evidence continuity are advisory. Repository scan
+        # semantics continue to own the Check conclusion.
         "conclusion": result["conclusion"],
         "completed_at": _completed_at(),
         "output": output,
@@ -107,14 +107,15 @@ def handle_product_aware_event(
     api: BetaGitHubApi,
     secrets: AppSecrets,
 ) -> dict[str, Any]:
-    """Run the proven repository event path, then add trusted product context.
+    """Run repository + evidence-continuity evaluation, then add product context.
 
     The repository scan remains authoritative for Check success/neutral/failure.
-    Product scope is an advisory second layer built from explicit default-branch
-    registration and immutable member repository snapshots.
+    Evidence continuity and product scope are advisory layers built from the PR
+    base and explicit default-branch product registration respectively.
     """
 
-    base = handle_beta_github_event(event_name, payload, api=api, secrets=secrets)
+    base = handle_evidence_aware_event(event_name, payload, api=api, secrets=secrets)
+    evidence_manifest = base.pop("_evidenceManifest", None)
     if not base.get("handled") or int(base.get("relevantFiles") or 0) == 0:
         return base
 
@@ -148,6 +149,7 @@ def handle_product_aware_event(
 
     assessment, plan = product_scope
     output = render_beta_check_output(trigger_result, no_relevant_changes=False)
+    output = append_evidence_output(output, evidence_manifest)
     output = _append_product_output(output, assessment, plan)
     check = _replace_check_output(api, trigger_token, target, trigger_result, output)
 
