@@ -71,8 +71,16 @@ def _manifest(related="example/control-plane", roles=None):
 
 
 class _ProductApi:
-    def __init__(self, manifest, *, related_visibility="private", related_entries=None):
+    def __init__(
+        self,
+        manifest,
+        *,
+        related_visibility="private",
+        related_entries=None,
+        related_manifest=None,
+    ):
         self.manifest = manifest
+        self.related_manifest = manifest if related_manifest is None else related_manifest
         self.related_visibility = related_visibility
         self.related_repository = manifest["repositories"][1]["name"]
         self.related_entries = related_entries or {
@@ -83,13 +91,17 @@ class _ProductApi:
         self.token_bodies = []
         self.tarball_calls = []
 
+    @staticmethod
+    def _manifest_response(manifest):
+        content = yaml.safe_dump(manifest, sort_keys=False).encode("utf-8")
+        return {"type": "file", "encoding": "base64", "content": base64.b64encode(content).decode("ascii")}
+
     def _request(self, method, path, *, token=None, body=None, **kwargs):  # noqa: ARG002
         self.calls.append((method, path, token))
         if path == "/repos/example/contracts":
             return {"default_branch": "main", "visibility": "private", "private": True}
         if path.startswith("/repos/example/contracts/contents/.iaap/product.yaml?ref="):
-            content = yaml.safe_dump(self.manifest, sort_keys=False).encode("utf-8")
-            return {"type": "file", "encoding": "base64", "content": base64.b64encode(content).decode("ascii")}
+            return self._manifest_response(self.manifest)
         if path == f"/repos/{self.related_repository}/installation":
             return {"id": 77}
         if path == "/app/installations/77/access_tokens":
@@ -97,6 +109,8 @@ class _ProductApi:
             return {"token": "related-token"}
         if path == f"/repos/{self.related_repository}":
             return {"default_branch": "main", "visibility": self.related_visibility, "private": self.related_visibility != "public"}
+        if path.startswith(f"/repos/{self.related_repository}/contents/.iaap/product.yaml?ref="):
+            return self._manifest_response(self.related_manifest)
         if path == f"/repos/{self.related_repository}/commits/main":
             return {"sha": "b" * 40}
         raise RuntimeError(f"unexpected request: {method} {path}")
@@ -120,7 +134,7 @@ def _evaluate(api):
 
 
 class ProductGitHubScopeTests(unittest.TestCase):
-    def test_trusted_default_branch_manifest_drives_related_repo_scope(self):
+    def test_trusted_default_branch_manifests_drive_related_repo_scope(self):
         api = _ProductApi(_manifest())
         scope = _evaluate(api)
         self.assertIsNotNone(scope)
@@ -129,8 +143,8 @@ class ProductGitHubScopeTests(unittest.TestCase):
         self.assertEqual(assessment["completeness"]["present"], 2)
         self.assertEqual(plan["schemaVersion"], "product-planning-report/v1")
         manifest_calls = [call for call in api.calls if "/contents/.iaap/product.yaml" in call[1]]
-        self.assertEqual(len(manifest_calls), 1)
-        self.assertIn("?ref=main", manifest_calls[0][1])
+        self.assertEqual(len(manifest_calls), 2)
+        self.assertTrue(all("?ref=main" in call[1] for call in manifest_calls))
 
     def test_related_token_is_one_repo_and_contents_read_only(self):
         api = _ProductApi(_manifest())
@@ -140,6 +154,16 @@ class ProductGitHubScopeTests(unittest.TestCase):
             [{"repositories": ["control-plane"], "permissions": {"contents": "read"}}],
         )
         self.assertEqual(api.tarball_calls, [("related-token", "example/control-plane", "b" * 40)])
+
+    def test_nonreciprocal_product_membership_is_not_read_as_product_evidence(self):
+        manifest = _manifest()
+        other = _manifest()
+        other["product"] = {"id": "different-product", "name": "Different Product", "owner": "platform-team"}
+        api = _ProductApi(manifest, related_manifest=other)
+        assessment, _ = _evaluate(api)
+        self.assertEqual(assessment["conclusion"], "incomplete")
+        self.assertEqual(assessment["completeness"]["missingRequired"], ["example/control-plane"])
+        self.assertEqual(api.tarball_calls, [])
 
     def test_cross_owner_repository_is_not_read_and_product_is_incomplete(self):
         api = _ProductApi(_manifest(related="other/control-plane"))
