@@ -5,12 +5,48 @@ from typing import Any
 
 from .github_app import (
     AppSecrets,
+    CHECK_NAME,
     GitHubApi,
     GitHubAppError,
+    MAX_CHECK_TEXT,
+    PullRequestTarget,
+    _iso8601_now,
     create_app_jwt,
     handle_github_event,
+    render_check_output,
     target_from_rerequest,
 )
+from .planning import build_planning_report, render_planning_markdown
+
+
+def render_beta_check_output(
+    result: dict[str, Any],
+    *,
+    no_relevant_changes: bool = False,
+) -> dict[str, str]:
+    """Render the existing architecture Check plus the advisory planning layer.
+
+    The deterministic scan remains authoritative. The planning section is an
+    adapter over planning-report/v1 and appears only when Guard has findings to
+    remediate.
+    """
+
+    output = render_check_output(result, no_relevant_changes=no_relevant_changes)
+    if no_relevant_changes or not result.get("findings"):
+        return output
+
+    report = build_planning_report(result)
+    planning_text = render_planning_markdown(report, include_header=False).rstrip()
+    totals = report["totals"]
+    output["summary"] += (
+        f" Improvement plan: {totals['objectives']} objectives · "
+        f"{totals['keyResults']} key results · {totals['epics']} epics."
+    )
+    combined = output["text"] + "\n\n### Improvement Plan\n\n" + planning_text
+    if len(combined) > MAX_CHECK_TEXT:
+        combined = combined[: MAX_CHECK_TEXT - 16] + "\n… truncated."
+    output["text"] = combined
+    return output
 
 
 class BetaGitHubApi(GitHubApi):
@@ -76,6 +112,48 @@ class BetaGitHubApi(GitHubApi):
         if not isinstance(sha, str) or not sha:
             raise GitHubAppError("pull-request response did not contain a current head SHA")
         return sha
+
+    def upsert_check_run(
+        self,
+        token: str,
+        target: PullRequestTarget,
+        result: dict[str, Any],
+        *,
+        no_relevant_changes: bool,
+    ) -> dict[str, Any]:
+        output = render_beta_check_output(result, no_relevant_changes=no_relevant_changes)
+        base_payload = {
+            "name": CHECK_NAME,
+            "external_id": target.external_id,
+            "status": "completed",
+            "conclusion": result["conclusion"],
+            "completed_at": _iso8601_now(),
+            "output": output,
+        }
+        existing = next(
+            (
+                run
+                for run in self.check_runs_for_revision(token, target.repository, target.head_sha)
+                if run.get("external_id") == target.external_id and run.get("name") == CHECK_NAME
+            ),
+            None,
+        )
+        encoded_repo = urllib.parse.quote(target.repository, safe="/")
+        if existing and isinstance(existing.get("id"), int):
+            return self._request(
+                "PATCH",
+                f"/repos/{encoded_repo}/check-runs/{existing['id']}",
+                token=token,
+                body=base_payload,
+            )
+        payload = dict(base_payload)
+        payload["head_sha"] = target.head_sha
+        return self._request(
+            "POST",
+            f"/repos/{encoded_repo}/check-runs",
+            token=token,
+            body=payload,
+        )
 
 
 def handle_beta_github_event(

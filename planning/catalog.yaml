@@ -1,0 +1,213 @@
+planningCatalogVersion: iaap-planning/v0.1.0
+schemaVersion: planning-report/v1
+productBoundary:
+  purpose: Convert deterministic IaaP findings into an evidence-traceable improvement plan.
+  excludes:
+    - sprint management
+    - assignment and capacity management
+    - delivery status tracking
+    - autonomous implementation
+    - autonomous issue creation
+    - autonomous remediation
+
+dimensions:
+  Product Abstraction:
+    objective: Strengthen the infrastructure product abstraction and accountable ownership model.
+  Consumer Boundary:
+    objective: Make consumer contracts stable, portable, and independent of implementation machinery.
+  Experience / Authority:
+    objective: Keep the experience layer replaceable and bounded to product intent rather than infrastructure execution.
+  Control-Plane Separation:
+    objective: Establish explicit and non-overlapping control-plane reconciliation authority.
+  Governance:
+    objective: Make authorization and deterministic product validation explicit, reviewable, and evidence-backed.
+  Evidence Readiness:
+    objective: Make infrastructure-product lifecycle outcomes machine-observable and reproducible.
+
+rules:
+  IAP-P001:
+    epic: Remove implementation machinery from consumer-facing contracts
+    outcome: Consumers request product capabilities without selecting provider, workspace, module, or implementation topology.
+    feature: Stable implementation-independent product contract
+    story:
+      actor: platform consumer
+      want: request infrastructure by product capability instead of provider implementation details
+      soThat: the consumer contract remains stable when the platform implementation changes
+    acceptanceEvidence:
+      - Consumer-facing schemas contain no prohibited implementation machinery.
+      - Deterministic contract validation passes.
+    candidateTasks:
+      - Identify provider-specific or control-plane-specific fields exposed to consumers.
+      - Replace implementation fields with product capability fields.
+      - Add or update contract validation fixtures.
+      - Capture passing Guard evidence.
+
+  IAP-P002:
+    epic: Move lifecycle policy ownership behind the product boundary
+    outcome: Product teams own deletion, orphaning, retention, and equivalent infrastructure lifecycle policy.
+    feature: Product-owned lifecycle policy
+    story:
+      actor: platform consumer
+      want: consume a product with safe lifecycle behavior already defined
+      soThat: I do not need to understand or control implementation lifecycle machinery
+    acceptanceEvidence:
+      - Consumer contracts do not expose platform-owned lifecycle controls.
+      - Lifecycle policy is defined in the product implementation or governance layer.
+    candidateTasks:
+      - Remove consumer-selectable lifecycle implementation fields.
+      - Define product-owned lifecycle defaults and policy.
+      - Add negative validation for prohibited lifecycle fields.
+      - Capture passing Guard evidence.
+
+  IAP-X001:
+    epic: Separate the experience layer from infrastructure execution
+    outcome: Storefronts and portals submit bounded product intent while the control plane retains execution authority.
+    feature: Intent-only consumer experience
+    story:
+      actor: platform consumer
+      want: submit a reviewable infrastructure product request through the experience layer
+      soThat: the storefront can change without becoming an infrastructure executor
+    acceptanceEvidence:
+      - Experience actions create product intent or reviewable proposals only.
+      - Direct infrastructure apply, delete, or provider execution is absent from the experience layer.
+    candidateTasks:
+      - Identify direct execution actions in storefront or portal workflows.
+      - Replace execution actions with product-order submission.
+      - Add deterministic authority-boundary tests.
+      - Capture passing Guard evidence.
+
+  IAP-A001:
+    epic: Bound AI authority to interpretation and proposal
+    outcome: AI can assist with analysis and proposals without receiving infrastructure credentials or execution authority.
+    feature: Least-privilege AI assistance boundary
+    story:
+      actor: platform engineer
+      want: AI assistance that cannot directly execute infrastructure changes
+      soThat: AI improves productivity without becoming an unaccountable control plane
+    acceptanceEvidence:
+      - AI policy denies infrastructure execution and credential access.
+      - Allowed tools are limited to bounded interpretation, proposal, explanation, diagnosis, or evidence assembly.
+    candidateTasks:
+      - Remove direct apply, delete, admin, and secret-access capabilities from AI policy.
+      - Define an explicit AI allowlist.
+      - Add negative tests for prohibited authority.
+      - Capture passing Guard evidence.
+
+  IAP-A002:
+    epic: Restore accountable human authorization
+    outcome: Material infrastructure proposals require an explicit accountable authorization step before execution.
+    feature: Human authorization boundary
+    story:
+      actor: accountable platform approver
+      want: material infrastructure proposals to require my explicit authorization
+      soThat: automation cannot approve or merge its own consequential changes
+    acceptanceEvidence:
+      - Self-approval and approval bypass are disabled.
+      - A human authorization step exists after deterministic validation and before execution.
+    candidateTasks:
+      - Remove self-approval or own-proposal merge authority.
+      - Define the accountable approval boundary.
+      - Add deterministic tests for approval bypass.
+      - Capture passing Guard evidence.
+
+  IAP-C001:
+    epic: Align consumer constraints with the canonical product contract
+    outcome: Every value accepted by the consumer experience is valid under the canonical product API.
+    feature: Contract-compatible storefront constraints
+    story:
+      actor: platform consumer
+      want: the storefront to accept only values the product contract can fulfill
+      soThat: accepted orders do not fail because the experience and product API disagree
+    acceptanceEvidence:
+      - Storefront enums and constraints are equal to or narrower than canonical constraints.
+      - Paired contract compatibility validation passes.
+    candidateTasks:
+      - Compare storefront constraints with canonical product schema.
+      - Narrow incompatible enums, lengths, ranges, or patterns.
+      - Add paired contract compatibility tests.
+      - Capture passing Guard evidence.
+
+  IAP-P003:
+    epic: Introduce a recognizable infrastructure product abstraction
+    outcome: Infrastructure implementation is consumed through a stable product contract rather than implementation primitives.
+    feature: Canonical infrastructure product API
+    story:
+      actor: platform consumer
+      want: a stable product contract for the infrastructure capability
+      soThat: I can consume outcomes without understanding the underlying implementation
+    acceptanceEvidence:
+      - A canonical consumer product contract exists in analyzed scope.
+      - The contract expresses outcomes while hiding implementation topology.
+    candidateTasks:
+      - Define the minimum consumer-facing product schema.
+      - Separate product intent from implementation configuration.
+      - Add ownership and compatibility metadata.
+      - Capture passing Guard evidence.
+
+  IAP-P004:
+    epic: Add accountable product ownership metadata
+    outcome: Every infrastructure product request carries clear team or owner accountability.
+    feature: Product ownership contract
+    story:
+      actor: platform operator
+      want: every product request to identify an accountable owner or team
+      soThat: lifecycle, support, and governance decisions have a durable owner
+    acceptanceEvidence:
+      - Owner, team, or equivalent accountability metadata is required by the product contract.
+      - Validation rejects requests without accountable ownership.
+    candidateTasks:
+      - Add required owner or team metadata to the product schema.
+      - Define allowed ownership format or source of truth.
+      - Add validation for missing ownership.
+      - Capture passing Guard evidence.
+
+  IAP-G001:
+    epic: Establish deterministic product-boundary validation
+    outcome: Governed product changes can independently prove architecture-contract behavior.
+    feature: Executable product architecture validation
+    story:
+      actor: platform maintainer
+      want: deterministic validation of the product boundary
+      soThat: architecture governance is demonstrated by executable evidence rather than prose or CI presence alone
+    acceptanceEvidence:
+      - An independently executable validation path exists.
+      - CI or local validation exercises the relevant product boundary.
+    candidateTasks:
+      - Add a deterministic validation script or test suite.
+      - Cover the affected product contract or authority boundary.
+      - Wire validation into the repository quality gate.
+      - Capture passing Guard evidence.
+
+  IAP-E001:
+    epic: Establish machine-observable lifecycle evidence
+    outcome: Product reconciliation, status, teardown, or lifecycle outcomes can be observed and reproduced.
+    feature: Infrastructure product lifecycle evidence contract
+    story:
+      actor: platform operator
+      want: machine-observable lifecycle evidence for infrastructure products
+      soThat: I can prove what happened without reconstructing outcomes from tickets or assumptions
+    acceptanceEvidence:
+      - A status, reconciliation, teardown, or lifecycle evidence path exists.
+      - Evidence can be correlated to the infrastructure product lifecycle.
+    candidateTasks:
+      - Define the minimum lifecycle evidence fields.
+      - Add status, reconciliation, teardown, or equivalent evidence output.
+      - Add validation for evidence availability.
+      - Capture passing Guard evidence.
+
+  IAP-CX01:
+    epic: Clarify authoritative reconciler ownership
+    outcome: Each external resource or lifecycle domain has one explicit authoritative reconciler or a bounded migration handoff.
+    feature: Reconciliation ownership declaration
+    story:
+      actor: platform operator
+      want: explicit reconciliation ownership for each managed resource domain
+      soThat: multiple control paths cannot silently co-manage the same infrastructure
+    acceptanceEvidence:
+      - Reconciliation ownership is explicit.
+      - Multiple active reconcilers require a documented bounded handoff.
+    candidateTasks:
+      - Identify active reconcilers for the affected resource domain.
+      - Declare the authoritative reconciler.
+      - Document any temporary migration handoff.
+      - Capture evidence that co-management is not active.
