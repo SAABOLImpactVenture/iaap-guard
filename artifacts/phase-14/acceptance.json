@@ -1,0 +1,19 @@
+{
+  "phase": 14,
+  "capability": "pr-base-evidence-continuity",
+  "contract": {
+    "baselineSource": "github-pull-request-base-sha",
+    "evidenceModel": "continuity/v1",
+    "checkConclusionOwner": "repository-scan",
+    "continuityBlocking": false,
+    "permissionExpansion": false,
+    "persistentCustomerDatabase": false
+  },
+  "acceptance": [
+    "supported continuity is rendered in the GitHub Check",
+    "Guard-material changes render review_required",
+    "repository Check conclusion semantics are preserved",
+    "product-aware output preserves evidence continuity",
+    "authorization is not inferred from evidence continuity"
+  ]
+}
