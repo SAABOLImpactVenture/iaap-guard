@@ -6,7 +6,8 @@ import os
 from typing import Any
 
 from .github_app import AppSecrets, GitHubAppError, verify_webhook_signature
-from .github_beta_runtime import BetaGitHubApi, handle_beta_github_event
+from .github_beta_runtime import BetaGitHubApi
+from .github_product_runtime import handle_product_aware_event
 
 
 def _secret_from_aws(secret_arn: str) -> str:
@@ -110,7 +111,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # no
             return _response(400, {"error": "invalid_json_payload"})
 
         api = BetaGitHubApi(base_url=os.environ.get("IAAP_GUARD_GITHUB_API_URL", "https://api.github.com"))
-        result = handle_beta_github_event(event_name, payload, api=api, secrets=secrets)
+        result = handle_product_aware_event(event_name, payload, api=api, secrets=secrets)
         result["delivery"] = delivery
         return _response(200 if result.get("handled") else 202, result)
     except (ValueError, json.JSONDecodeError) as exc:
