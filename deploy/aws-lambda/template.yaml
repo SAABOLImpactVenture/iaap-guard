@@ -17,6 +17,19 @@ Parameters:
     Default: 5
     MinValue: 0
     Description: Reserved Lambda concurrency for the public beta. Set to 0 to stop invocations in an emergency.
+  GuardReservedConcurrencyEnabled:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Whether to apply the per-function reserved Lambda concurrency limit.
+
+Conditions:
+  GuardReservedConcurrencyIsEnabled:
+    Fn::Equals:
+      - Ref: GuardReservedConcurrencyEnabled
+      - 'true'
 
 Resources:
   GuardFunction:
@@ -31,7 +44,10 @@ Resources:
       MemorySize: 512
       Timeout: 60
       ReservedConcurrentExecutions:
-        Ref: GuardReservedConcurrency
+        Fn::If:
+          - GuardReservedConcurrencyIsEnabled
+          - Ref: GuardReservedConcurrency
+          - Ref: AWS::NoValue
       EphemeralStorage:
         Size: 1024
       Environment:
