@@ -52,6 +52,17 @@ Canonical evidence: [`artifacts/phase-14/live-acceptance.json`](https://github.c
 
 ## Start here before installing
 
+Run deterministic adoption preflight before the first meaningful evaluation:
+
+```bash
+PYTHONPATH=src python3 -m iaap_guard.cli preflight . --repository owner/name
+```
+
+A single repository can be `READY` without `.iaap/product.yaml`. Registered products add
+GitHub-aware same-owner, visibility, App-access, reciprocity, immutable-revision, and
+required-member diagnostics in the existing advisory Check output. See
+[`docs/ADOPTION-READINESS.md`](docs/ADOPTION-READINESS.md).
+
 For adoption prerequisites, multi-repository requirements, beta limits, and common failure modes, read **[`docs/ADOPTION-PREREQUISITES.md`](docs/ADOPTION-PREREQUISITES.md)**.
 
 That guide answers practical questions such as:
@@ -325,6 +336,7 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 ## Repository contents
 
 - `docs/ADOPTION-PREREQUISITES.md` — install/adoption requirements, multi-repo prerequisites, beta limits, and troubleshooting.
+- `docs/ADOPTION-READINESS.md` — executable preflight, readiness-report/v1, requirement IDs, and authority boundaries.
 - `docs/PRODUCT.md` — product definition, proven outcomes, and explicit exclusions.
 - `docs/ARCHITECTURE.md` — deterministic center, evidence continuity, federation, and adapter boundaries.
 - `docs/CORE.md` — implemented deterministic engine plus evidence contract and limitations.
@@ -343,6 +355,7 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - `schemas/product-manifest.schema.json` — multi-repository product membership contract.
 - `schemas/product-assessment.schema.json` — normalized product assessment contract.
 - `schemas/product-planning-report.schema.json` — normalized product improvement-plan contract.
+- `schemas/readiness-report.schema.json` — normalized repository/product adoption-readiness contract.
 - `src/iaap_guard/` — deterministic core plus thin GitHub App, evidence, planning, and product-scope adapters.
 - `tests/` — frozen fixture, engine-invariant, adapter/security, evidence-continuity, planning, and product-scope tests.
 
@@ -355,5 +368,7 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 **PHASE 12 — Multi-Repository Product Scope: COMPLETE**  
 **PHASE 13 — Evidence Continuity Core: COMPLETE**  
 **PHASE 14 — PR-base Evidence Continuity: COMPLETE**
+
+**PHASE 15 — Adoption Readiness / Preflight: IN REVIEW**
 
 Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change.

@@ -8,6 +8,7 @@ from .evidence import build_evidence_manifest, render_evidence_markdown
 from .planning import build_planning_report, render_planning_markdown
 from .product import build_product_assessment, load_product_manifest, load_scan_results, render_product_markdown
 from .product_planning import build_product_planning_report, render_product_planning_markdown
+from .readiness import evaluate_repository_readiness, render_readiness_markdown
 from .scanner import scan_path
 
 
@@ -62,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
     scan = subparsers.add_parser("scan", help="scan a repository, directory, or fixture")
     _add_scan_arguments(scan)
     scan.add_argument("--format", choices=("text", "json"), default="text")
+
+    preflight = subparsers.add_parser("preflight", help="diagnose deterministic repository or product adoption readiness")
+    preflight.add_argument("target", type=Path)
+    preflight.add_argument("--repository")
+    preflight.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    preflight.add_argument("--output", type=Path)
 
     evidence = subparsers.add_parser(
         "evidence",
@@ -137,6 +144,12 @@ def main() -> int:
             )
         _write_or_print(rendered, args.output)
         return 1 if assessment["conclusion"] in {"failure", "incomplete"} else 0
+
+    if args.command == "preflight":
+        report = evaluate_repository_readiness(args.target, repository=args.repository)
+        rendered = json.dumps(report, indent=2, sort_keys=False) + "\n" if args.format == "json" else render_readiness_markdown(report)
+        _write_or_print(rendered, args.output)
+        return 1 if report["overallStatus"] == "BLOCKED" else 0
 
     result = scan_path(
         args.target,

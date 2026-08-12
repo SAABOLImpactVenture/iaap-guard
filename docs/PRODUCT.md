@@ -16,6 +16,15 @@ The temporal question is intentionally narrower than authorization. IaaP Guard c
 
 ## Product outcomes
 
+### Adoption Readiness — Phase 15 IN REVIEW
+
+`readiness-report/v1` diagnoses whether the intended repository/product scope can be
+evaluated meaningfully. A missing product manifest is normal in single-repository mode.
+For registered products, required access, trust, reciprocity, immutable revision, and
+bounded acquisition barriers are reported before incomplete federation is mistaken for
+health. Readiness remains advisory and distinct from architecture, Evidence Continuity,
+Product Assessment, and authorization.
+
 IaaP Guard should help a team achieve seven outcomes:
 
 1. **Detect product-boundary drift early.** Infrastructure implementation details, execution authority, lifecycle choices, or governance gaps should be visible before they silently become part of the consumer contract.

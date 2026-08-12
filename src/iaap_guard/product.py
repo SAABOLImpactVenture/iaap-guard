@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,12 @@ def load_product_manifest(path: str | Path) -> dict[str, Any]:
     repositories = manifest.get("repositories")
     if not isinstance(product, dict) or not product.get("id") or not product.get("name"):
         raise ValueError("product manifest requires product.id and product.name")
+    if not isinstance(product["id"], str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", product["id"]):
+        raise ValueError("product.id must match ^[a-z0-9][a-z0-9-]*$")
+    if not isinstance(product["name"], str) or not product["name"].strip():
+        raise ValueError("product.name must be a non-empty string")
+    if "owner" in product and (not isinstance(product["owner"], str) or not product["owner"].strip()):
+        raise ValueError("product.owner must be a non-empty string when present")
     if not isinstance(repositories, list) or not repositories:
         raise ValueError("product manifest requires at least one repository")
     if len(repositories) > MAX_PRODUCT_REPOSITORIES:
@@ -46,13 +53,15 @@ def load_product_manifest(path: str | Path) -> dict[str, Any]:
             raise ValueError("each repository entry must be a mapping")
         name = item.get("name")
         roles = item.get("roles")
-        if not isinstance(name, str) or "/" not in name:
+        if not isinstance(name, str) or not re.fullmatch(r"[^/\s]+/[^/\s]+", name):
             raise ValueError("repository names must use owner/name form")
         if name in names:
             raise ValueError(f"duplicate repository in product manifest: {name}")
         names.add(name)
         if not isinstance(roles, list) or not roles:
             raise ValueError(f"{name}: roles must be a non-empty list")
+        if len(roles) != len(set(roles)):
+            raise ValueError(f"{name}: roles must not contain duplicates")
         unknown = set(roles) - set(ROLE_ORDER)
         if unknown:
             raise ValueError(f"{name}: unknown repository roles: {sorted(unknown)}")

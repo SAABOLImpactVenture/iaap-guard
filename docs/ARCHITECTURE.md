@@ -10,6 +10,11 @@ The system now has three related responsibilities:
 2. connect explicitly registered repository evidence into one logical product assessment; and
 3. compare trustworthy prior Guard evidence with current Guard evidence to determine whether the previous evidence remains supported within Guard's scope.
 
+Adoption Readiness is a diagnostic entry layer around these responsibilities. The
+network-free local engine and GitHub adapter share `readiness-report/v1`; they reuse the
+existing manifest loader and federation authority rather than duplicating architecture
+rules or broadening permissions.
+
 ```text
 Repository / PR files
         ↓
@@ -284,6 +289,12 @@ Explicit product manifests, reciprocal trust, bounded federation, cross-reposito
 ### Phase 14 — PR-base Evidence Continuity — COMPLETE
 
 The deployed GitHub App derives the technical baseline from the immutable PR base SHA, compares it with the PR head SHA, and publishes Evidence Continuity in the existing Architecture Check while preserving the existing Check conclusion authority boundary. Both `SUPPORTED` and `REVIEW REQUIRED` live paths have been proven.
+
+### Phase 15 — Adoption Readiness / Preflight — IN REVIEW
+
+Deterministic repository preflight, GitHub-aware product diagnostics, and advisory Check
+composition are implemented. Merge, runtime deployment, live acceptance, and retained
+evidence remain required before completion.
 
 ## Public App authority
 
