@@ -16,6 +16,7 @@ PRODUCT_MANIFEST_SCHEMA = ROOT / "schemas/product-manifest.schema.json"
 PRODUCT_ASSESSMENT_SCHEMA = ROOT / "schemas/product-assessment.schema.json"
 PRODUCT_PLANNING_SCHEMA = ROOT / "schemas/product-planning-report.schema.json"
 EVIDENCE_MANIFEST_SCHEMA = ROOT / "schemas/evidence-manifest.schema.json"
+READINESS_REPORT_SCHEMA = ROOT / "schemas/readiness-report.schema.json"
 EXPECTED = ROOT / "fixtures/expected-results.yaml"
 
 
@@ -37,6 +38,7 @@ def validate_machine_readable_files() -> None:
     product_assessment_schema = json.loads(PRODUCT_ASSESSMENT_SCHEMA.read_text(encoding="utf-8"))
     product_planning_schema = json.loads(PRODUCT_PLANNING_SCHEMA.read_text(encoding="utf-8"))
     evidence_manifest_schema = json.loads(EVIDENCE_MANIFEST_SCHEMA.read_text(encoding="utf-8"))
+    readiness_report_schema = json.loads(READINESS_REPORT_SCHEMA.read_text(encoding="utf-8"))
 
     if catalog.get("catalogVersion") != "iaap-guard/v0.1.2":
         fail("unexpected rule catalog version")
@@ -126,6 +128,7 @@ def validate_machine_readable_files() -> None:
         product_assessment_schema,
         product_planning_schema,
         evidence_manifest_schema,
+        readiness_report_schema,
     ):
         validator_cls = validator_for(schema)
         validator_cls.check_schema(schema)
@@ -168,11 +171,13 @@ def validate_machine_readable_files() -> None:
         fail("unexpected evidence manifest schema version")
     if evidence_manifest_schema.get("properties", {}).get("evidenceModelVersion", {}).get("const") != "continuity/v1":
         fail("unexpected evidence continuity model version")
+    if readiness_report_schema.get("properties", {}).get("schemaVersion", {}).get("const") != "readiness-report/v1":
+        fail("unexpected readiness report schema version")
 
     print(
         f"specification validation passed: {len(rules)} rules, "
         f"{len(case_paths)} fixtures, {len(required_fail_fixtures)} critical FAIL rules, "
-        f"{len(planning_rules)} planning templates, 3 product-scope schemas, 1 evidence-continuity schema"
+        f"{len(planning_rules)} planning templates, 3 product-scope schemas, 1 evidence-continuity schema, 1 readiness schema"
     )
 
 

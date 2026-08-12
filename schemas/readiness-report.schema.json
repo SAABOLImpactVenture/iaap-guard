@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saabol.example/schemas/iaap-guard/readiness-report.schema.json",
+  "title": "IaaP Guard Readiness Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scope", "overallStatus", "summary", "requirements", "blockingRequirements", "advisoryRequirements", "productMembers", "boundary"],
+  "properties": {
+    "schemaVersion": {"const": "readiness-report/v1"},
+    "scope": {"type": "object", "additionalProperties": false, "required": ["mode"], "properties": {"mode": {"enum": ["repository", "product"]}}},
+    "repository": {"type": "object", "additionalProperties": false, "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}}},
+    "product": {"type": "object", "additionalProperties": false, "required": ["id", "name", "owner"], "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "owner": {"type": ["string", "null"]}}},
+    "overallStatus": {"enum": ["READY", "READY_WITH_ADVISORIES", "BLOCKED", "NOT_APPLICABLE"]},
+    "summary": {"type": "object", "additionalProperties": false, "required": ["total", "ready", "advisory", "blocked", "notApplicable"], "properties": {"total": {"type": "integer", "minimum": 0}, "ready": {"type": "integer", "minimum": 0}, "advisory": {"type": "integer", "minimum": 0}, "blocked": {"type": "integer", "minimum": 0}, "notApplicable": {"type": "integer", "minimum": 0}}},
+    "requirements": {"type": "array", "items": {"$ref": "#/$defs/requirement"}},
+    "blockingRequirements": {"type": "array", "items": {"type": "string", "pattern": "^IAP-RDY[0-9]{3}$"}},
+    "advisoryRequirements": {"type": "array", "items": {"type": "string", "pattern": "^IAP-RDY[0-9]{3}$"}},
+    "productMembers": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["repository", "required", "status", "observed"], "properties": {"repository": {"type": "string"}, "required": {"type": "boolean"}, "status": {"enum": ["READY", "READY_WITH_ADVISORIES", "BLOCKED"]}, "observed": {"type": "string"}}}},
+    "boundary": {"type": "object", "additionalProperties": false, "required": ["diagnosticOnly", "architectureCheckConclusionUnchanged", "doesNotExpandGitHubAppPermissions", "localNetworkAccess", "evidenceContinuitySemanticsUnchanged", "productAssessmentSemanticsUnchanged"], "properties": {"diagnosticOnly": {"const": true}, "architectureCheckConclusionUnchanged": {"const": true}, "doesNotExpandGitHubAppPermissions": {"const": true}, "localNetworkAccess": {"type": "boolean"}, "evidenceContinuitySemanticsUnchanged": {"const": true}, "productAssessmentSemanticsUnchanged": {"const": true}}}
+  },
+  "$defs": {"requirement": {"type": "object", "additionalProperties": false, "required": ["id", "name", "status", "severity", "blocking", "observed", "impact", "remediation"], "properties": {"id": {"type": "string", "pattern": "^IAP-RDY[0-9]{3}$"}, "name": {"type": "string"}, "status": {"enum": ["READY", "ADVISORY", "BLOCKED", "NOT_APPLICABLE"]}, "severity": {"enum": ["blocking", "advisory"]}, "blocking": {"type": "boolean"}, "observed": {"type": "string"}, "impact": {"type": "string"}, "remediation": {"type": "string"}, "repository": {"type": "string"}, "path": {"type": "string"}}}}
+}

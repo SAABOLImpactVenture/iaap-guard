@@ -6,6 +6,11 @@ IaaP Guard is intentionally low-authority, but a useful result still depends on 
 
 Start here before opening a support issue or changing Guard permissions.
 
+This human guide remains the source for prerequisite explanation. Its executable companion
+is [`ADOPTION-READINESS.md`](ADOPTION-READINESS.md): run `PYTHONPATH=src python3 -m
+iaap_guard.cli preflight . --repository owner/name` to convert locally observable barriers
+into deterministic `readiness-report/v1` diagnostics before architecture evaluation.
+
 ## Choose the operating mode first
 
 IaaP Guard supports two adoption paths.

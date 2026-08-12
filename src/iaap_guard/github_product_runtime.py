@@ -21,6 +21,7 @@ from .github_evidence_runtime import append_evidence_output, handle_evidence_awa
 from .github_product_scope import evaluate_trusted_product_scope
 from .product import render_product_markdown
 from .product_planning import render_product_planning_markdown
+from .readiness import render_readiness_markdown
 from .scanner import scan_path
 
 
@@ -52,6 +53,20 @@ def _append_product_output(
     product_text = render_product_markdown(assessment).rstrip()
     plan_text = render_product_planning_markdown(plan).rstrip()
     combined = output["text"] + "\n\n---\n\n" + product_text + "\n\n" + plan_text
+    if len(combined) > MAX_CHECK_TEXT:
+        combined = combined[: MAX_CHECK_TEXT - 16] + "\n… truncated."
+    output["text"] = combined
+    return output
+
+
+def _append_readiness_output(output: dict[str, str], readiness: dict[str, Any]) -> dict[str, str]:
+    output = dict(output)
+    members = readiness.get("productMembers") or []
+    required = [item for item in members if item.get("required")]
+    ready = [item for item in required if item.get("status") == "READY"]
+    output["summary"] += f" Product Readiness: **{readiness['overallStatus']}** · **{len(ready)}/{len(required)} required repositories ready**."
+    text = render_readiness_markdown(readiness).rstrip()
+    combined = output["text"] + "\n\n---\n\n" + text
     if len(combined) > MAX_CHECK_TEXT:
         combined = combined[: MAX_CHECK_TEXT - 16] + "\n… truncated."
     output["text"] = combined
@@ -142,26 +157,36 @@ def handle_product_aware_event(
             trigger_root=root,
             trigger_result=trigger_result,
             extract_archive=_safe_extract_tarball,
+            include_readiness=True,
         )
 
     if product_scope is None:
         return base
 
-    assessment, plan = product_scope
+    assessment, plan, readiness = product_scope
     output = render_beta_check_output(trigger_result, no_relevant_changes=False)
     output = append_evidence_output(output, evidence_manifest)
-    output = _append_product_output(output, assessment, plan)
+    output = _append_readiness_output(output, readiness)
+    if readiness["overallStatus"] != "BLOCKED" and assessment is not None and plan is not None:
+        output = _append_product_output(output, assessment, plan)
     check = _replace_check_output(api, trigger_token, target, trigger_result, output)
 
     base["checkRunId"] = check.get("id", base.get("checkRunId"))
-    base["product"] = {
-        "id": assessment["product"]["id"],
-        "name": assessment["product"]["name"],
-        "conclusion": assessment["conclusion"],
-        "score": assessment["overallScore"],
-        "minimumMemberScore": assessment["minimumMemberScore"],
-        "registeredRepositories": assessment["completeness"]["registered"],
-        "presentRepositories": assessment["completeness"]["present"],
-        "evidenceRevision": assessment["evidenceRevision"],
+    base["readiness"] = {
+        "schemaVersion": readiness["schemaVersion"],
+        "status": readiness["overallStatus"],
+        "blocked": readiness["blockingRequirements"],
+        "advisory": readiness["advisoryRequirements"],
     }
+    if assessment is not None:
+        base["product"] = {
+            "id": assessment["product"]["id"],
+            "name": assessment["product"]["name"],
+            "conclusion": assessment["conclusion"],
+            "score": assessment["overallScore"],
+            "minimumMemberScore": assessment["minimumMemberScore"],
+            "registeredRepositories": assessment["completeness"]["registered"],
+            "presentRepositories": assessment["completeness"]["present"],
+            "evidenceRevision": assessment["evidenceRevision"],
+        }
     return base

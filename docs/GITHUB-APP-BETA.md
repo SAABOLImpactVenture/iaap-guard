@@ -228,6 +228,15 @@ See `docs/EVIDENCE-CONTINUITY.md` and `docs/PR-BASE-EVIDENCE-CONTINUITY.md` for 
 
 ## Product-aware enrichment
 
+### Product Readiness
+
+When trusted registration is present, the App appends `READY`,
+`READY_WITH_ADVISORIES`, or `BLOCKED` context with exact member obstacles and next
+actions. A blocked required member prevents misleading product-health rendering while
+repository architecture and Evidence Continuity remain visible. Readiness never changes
+the repository-owned Check conclusion and uses the existing related-repository
+`contents:read` token path; no permission type is added.
+
 If the triggering repository carries a trusted default-branch `.iaap/product.yaml`, the product-aware runtime can append a Product Assessment and Product Improvement Plan to the same Check.
 
 ### Product membership trust

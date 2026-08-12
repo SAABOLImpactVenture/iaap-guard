@@ -135,6 +135,13 @@ A pull request may propose a local membership change, but that proposed change d
 
 ## Product assessment
 
+Before assessment, Phase 15 Product Readiness diagnoses trusted registration and member
+acquisition barriers. Required missing/inaccessible/non-reciprocal members produce a
+precise `BLOCKED` reason; optional unavailable members are advisory where existing
+semantics permit. If readiness is blocked, the Check explains why normal Product
+Assessment cannot safely proceed instead of presenting partial evidence as product
+health. See [`ADOPTION-READINESS.md`](ADOPTION-READINESS.md).
+
 Each member keeps its normal `scan-result/v1`. IaaP Guard combines compatible member results into `product-assessment/v1`.
 
 The product assessment includes:

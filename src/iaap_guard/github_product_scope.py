@@ -10,6 +10,7 @@ from .loader import load_artifacts
 from .product import MAX_PRODUCT_REPOSITORIES, build_product_assessment, load_product_manifest
 from .product_planning import build_product_planning_report
 from .product_relationships import RELATIONSHIP_RULE_IDS, apply_relationship_evidence
+from .readiness import build_readiness_report, requirement
 from .scanner import scan_path
 
 PRODUCT_MANIFEST_PATH = ".iaap/product.yaml"
@@ -210,10 +211,19 @@ def evaluate_trusted_product_scope(
     trigger_root: Path,
     trigger_result: dict[str, Any],
     extract_archive: Callable[[bytes, Path], Path],
-) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    include_readiness: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any]] | tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any]] | None:
     """Evaluate one logical product using explicitly and reciprocally registered evidence."""
 
-    manifest, trigger_metadata = _trusted_manifest(api, trigger_token, trigger_repository)
+    diagnostics: list[dict[str, Any]] = []
+    member_readiness: list[dict[str, Any]] = []
+    try:
+        manifest, trigger_metadata = _trusted_manifest(api, trigger_token, trigger_repository)
+    except (RuntimeError, ValueError) as exc:
+        if not include_readiness:
+            raise
+        diagnostics.append(requirement("IAP-RDY101", "Trusted product registration", "BLOCKED", str(exc), "Guard cannot establish the intended trusted product boundary.", "Correct the default-branch .iaap/product.yaml or repository metadata, then rerun Guard.", repository=trigger_repository, path=PRODUCT_MANIFEST_PATH))
+        return None, None, build_readiness_report("product", trigger_repository, None, diagnostics)
     if manifest is None:
         return None
     repositories = manifest["repositories"]
@@ -222,7 +232,12 @@ def evaluate_trusted_product_scope(
 
     registered = {item["name"] for item in repositories}
     if trigger_repository not in registered:
-        raise RuntimeError("trusted product manifest does not register the triggering repository")
+        if not include_readiness:
+            raise RuntimeError("trusted product manifest does not register the triggering repository")
+        diagnostics.append(requirement("IAP-RDY101", "Trusted product registration", "BLOCKED", f"{trigger_repository} is absent from its trusted manifest.", "A repository cannot safely activate a product boundary that omits itself.", f"Add {trigger_repository} to the reciprocal default-branch membership declaration.", repository=trigger_repository, path=PRODUCT_MANIFEST_PATH))
+        return None, None, build_readiness_report("product", trigger_repository, manifest["product"], diagnostics)
+
+    diagnostics.append(requirement("IAP-RDY101", "Trusted product registration", "READY", "The triggering default branch contains valid, self-registering iaap-product/v1 membership.", "Guard can evaluate the declared trust boundary.", "No action required.", repository=trigger_repository, path=PRODUCT_MANIFEST_PATH))
 
     expected_membership = _membership_signature(manifest)
     trigger_owner = trigger_repository.split("/", 1)[0]
@@ -244,9 +259,14 @@ def evaluate_trusted_product_scope(
 
         for entry in repositories:
             repository = entry["name"]
+            required = bool(entry.get("required", True))
             if repository == trigger_repository:
+                member_readiness.append({"repository": repository, "required": required, "status": "READY", "observed": "Trigger repository evidence is available."})
                 continue
             if repository.split("/", 1)[0] != trigger_owner:
+                status = "BLOCKED" if required else "ADVISORY"
+                diagnostics.append(requirement("IAP-RDY102", "Same-owner federation boundary", status, f"{repository} is not owned by {trigger_owner}.", "V1 automatic federation does not cross GitHub owners.", "Use a same-owner product boundary or keep this relationship outside automatic V1 federation.", severity="blocking" if required else "advisory", repository=repository))
+                member_readiness.append({"repository": repository, "required": required, "status": "BLOCKED" if required else "READY_WITH_ADVISORIES", "observed": "Owner boundary mismatch."})
                 continue
             try:
                 token = _related_repository_token(api, app_jwt, repository)
@@ -255,6 +275,9 @@ def evaluate_trusted_product_scope(
                     # Do not read even the trusted product manifest across the
                     # V1 visibility boundary. This prevents product federation
                     # from becoming a configuration-probing side channel.
+                    status = "BLOCKED" if required else "ADVISORY"
+                    diagnostics.append(requirement("IAP-RDY103", "Member visibility boundary", status, f"{repository} visibility {_visibility(metadata)} does not match trigger visibility {trigger_visibility}.", "Guard intentionally does not read product content across the V1 visibility boundary.", "Align visibility or keep the relationship outside automatic federation.", severity="blocking" if required else "advisory", repository=repository))
+                    member_readiness.append({"repository": repository, "required": required, "status": "BLOCKED" if required else "READY_WITH_ADVISORIES", "observed": "Visibility mismatch."})
                     continue
                 related_manifest, _ = _trusted_manifest(
                     api,
@@ -263,7 +286,15 @@ def evaluate_trusted_product_scope(
                     metadata=metadata,
                 )
                 related_content_read = True
-                if related_manifest is None or _membership_signature(related_manifest) != expected_membership:
+                if related_manifest is None:
+                    status = "BLOCKED" if required else "ADVISORY"
+                    diagnostics.append(requirement("IAP-RDY105", "Trusted default-branch manifest", status, f"{repository} default branch does not contain {PRODUCT_MANIFEST_PATH}.", "Trusted federation cannot include this member.", "Merge the identical iaap-product/v1 declaration into the member default branch.", severity="blocking" if required else "advisory", repository=repository, path=PRODUCT_MANIFEST_PATH))
+                    member_readiness.append({"repository": repository, "required": required, "status": "BLOCKED" if required else "READY_WITH_ADVISORIES", "observed": "Trusted manifest is missing."})
+                    continue
+                if _membership_signature(related_manifest) != expected_membership:
+                    status = "BLOCKED" if required else "ADVISORY"
+                    diagnostics.append(requirement("IAP-RDY106", "Reciprocal product membership", status, f"{repository} default-branch identity or membership signature does not match the trigger declaration.", "Trusted federation cannot include the member; required-member assessment becomes INCOMPLETE.", "Merge the identical iaap-product/v1 declaration into the member default branch.", severity="blocking" if required else "advisory", repository=repository, path=PRODUCT_MANIFEST_PATH))
+                    member_readiness.append({"repository": repository, "required": required, "status": "BLOCKED" if required else "READY_WITH_ADVISORIES", "observed": "Reciprocal membership mismatch."})
                     continue
                 default_branch, sha = _default_revision(api, token, repository, metadata)
                 archive = api.repository_tarball(token, repository, sha)
@@ -283,10 +314,28 @@ def evaluate_trusted_product_scope(
                             relationship_bundle_bytes,
                         )
                 results.append(result)
-            except (RuntimeError, ValueError):
+                diagnostics.append(requirement("IAP-RDY108", "Member evidence acquisition", "READY", f"{repository} resolved to immutable default-branch SHA {sha} and bounded evidence was acquired.", "The member can participate in product evaluation.", "No action required.", repository=repository))
+                member_readiness.append({"repository": repository, "required": required, "status": "READY", "observed": f"Evidence acquired at {sha}."})
+            except (RuntimeError, ValueError) as exc:
                 # A malformed or inaccessible related member is unavailable
                 # product evidence; required members make the assessment
                 # INCOMPLETE instead of failing the triggering webhook.
+                status = "BLOCKED" if required else "ADVISORY"
+                observed = str(exc)
+                if "commit SHA" in observed:
+                    requirement_id, name = "IAP-RDY107", "Immutable default-branch revision"
+                    remediation = f"Ensure {repository}'s default branch resolves to an immutable Git commit SHA."
+                elif "manifest" in observed:
+                    requirement_id, name = "IAP-RDY105", "Trusted default-branch manifest"
+                    remediation = "Correct the member default-branch manifest to the existing iaap-product/v1 contract."
+                elif "archive" in observed or "snapshot" in observed:
+                    requirement_id, name = "IAP-RDY108", "Member evidence acquisition"
+                    remediation = "Bring the repository snapshot within existing Guard archive/file bounds and rerun Guard."
+                else:
+                    requirement_id, name = "IAP-RDY104", "Member App access and metadata"
+                    remediation = f"Grant the existing IaaP Guard App installation access to {repository} and ensure it has a default branch. No new permission type is required."
+                diagnostics.append(requirement(requirement_id, name, status, f"{repository}: {observed}", "Guard cannot acquire trusted evidence; a required-member assessment becomes INCOMPLETE.", remediation, severity="blocking" if required else "advisory", repository=repository))
+                member_readiness.append({"repository": repository, "required": required, "status": "BLOCKED" if required else "READY_WITH_ADVISORIES", "observed": str(exc)})
                 continue
 
         assessment = build_product_assessment(manifest, results)
@@ -321,4 +370,14 @@ def evaluate_trusted_product_scope(
             }
 
     plan = build_product_planning_report(assessment)
+    if include_readiness:
+        required_count = sum(bool(item.get("required", True)) for item in repositories)
+        ready_required = sum(item["required"] and item["status"] == "READY" for item in member_readiness)
+        status = "READY" if ready_required == required_count else "BLOCKED"
+        diagnostics.append(requirement("IAP-RDY109", "Required-member completeness", status, f"{ready_required}/{required_count} required repositories are ready.", "Missing required readiness prevents a safe complete product evaluation.", "Resolve the member-specific blockers before relying on Product Assessment." if status == "BLOCKED" else "No action required.", repository=trigger_repository))
+        relationship_status = "READY" if relationship_bundle_complete and assessment["relationshipEvaluation"]["status"] != "incomplete" else "BLOCKED"
+        diagnostics.append(requirement("IAP-RDY110", "Bounded product relationship evaluation", relationship_status, f"Relationship evaluation is {assessment['relationshipEvaluation']['status']} within the {MAX_RELATIONSHIP_BUNDLE_BYTES}-byte V1 bundle bound.", "An incomplete relationship evaluation cannot support a complete product-health claim.", "Reduce or split relationship evidence or resolve missing required members before Product Assessment." if relationship_status == "BLOCKED" else "No action required.", repository=trigger_repository))
+        readiness = build_readiness_report("product", trigger_repository, manifest["product"], diagnostics, member_readiness)
+        readiness["boundary"]["localNetworkAccess"] = True
+        return assessment, plan, readiness
     return assessment, plan
