@@ -4,7 +4,11 @@
 
 The public GitHub App wraps the proven deterministic IaaP Guard core with a small, stateless GitHub-native runtime.
 
-For IaaP-relevant pull requests, the App now evaluates both the immutable PR-head state and the immutable PR-base state so the existing `IaaP Guard / Architecture` Check can show point-in-time architecture results **and** Evidence Continuity.
+For IaaP-relevant pull requests, the App can now provide three distinct layers of evidence in the existing `IaaP Guard / Architecture` Check:
+
+1. repository architecture evaluation;
+2. PR-base Evidence Continuity; and
+3. trusted multi-repository Product Assessment and Product Improvement Plan when reciprocal product scope is configured.
 
 ```text
 GitHub pull request
@@ -24,10 +28,32 @@ PR file relevance check
                                                          ↓
                                                   continuity/v1
                                                          ↓
+                           optional trusted multi-repository federation
+                                                         ↓
                                       IaaP Guard / Architecture Check
 ```
 
-The adapter does not redefine classification, rule semantics, scoring, materiality, or continuity semantics.
+The adapter does not redefine classification, rule semantics, scoring, product relationship semantics, materiality, or continuity semantics.
+
+## Before installing: adopter prerequisites
+
+Repository teams should read [`ADOPTION-PREREQUISITES.md`](ADOPTION-PREREQUISITES.md) before the first live PR.
+
+That guide covers:
+
+- supported file types;
+- repository/archive limits;
+- what causes a full scan versus `No relevant changes`;
+- Evidence Continuity prerequisites;
+- multiple-repository enrollment;
+- reciprocal `.iaap/product.yaml` requirements;
+- same-owner and same-visibility federation boundaries;
+- App access to required member repositories;
+- `INCOMPLETE` causes;
+- the 12-repository V1 limit; and
+- common troubleshooting paths.
+
+The deployment prerequisites later in this document are for the **App operator**. Most repository users should not need AWS credentials or access to the hosting stack.
 
 ## Why AWS Lambda + Function URL for the beta
 
@@ -39,7 +65,7 @@ This is a beta hosting decision, not a permanent product dependency. The GitHub 
 
 ## GitHub App registration contract
 
-Create the App under the `SAABOLImpactVenture` organization and configure it to be installable by **Any account**.
+Create the App under the owning organization and configure it to be installable by the intended accounts. The SAABOL public-beta reference registration is under `SAABOLImpactVenture` and uses **Any account** installation scope.
 
 Use `config/github-app-v0.json` as the machine-readable authority contract.
 
@@ -69,7 +95,6 @@ GitHub App event subscriptions are event-level; action filtering is enforced det
 - **Webhook URL:** the `WebhookUrl` output from the Lambda deployment.
 - **Webhook secret:** a cryptographically random value stored in AWS Secrets Manager and entered into the GitHub App settings.
 - **User authorization / OAuth callback:** not required for the current beta.
-- **Installation scope:** Any account for the public beta.
 - **Marketplace listing:** not required and remains out of scope.
 
 Generate a GitHub App private key after registration. Store the PEM in AWS Secrets Manager. Never commit the PEM or webhook secret.
@@ -104,7 +129,7 @@ For each handled delivery:
 2. Reject an invalid webhook before loading the GitHub App private key or App ID.
 3. Load the numeric GitHub App ID and private key and generate a short-lived RS256 GitHub App JWT.
 4. Exchange the App JWT for an installation access token.
-5. Scope that installation token to **only the triggering repository** and to:
+5. Scope the triggering-repository token to **only the triggering repository** and to:
    - Contents: read;
    - Pull requests: read;
    - Checks: write.
@@ -113,11 +138,27 @@ For each handled delivery:
 
 No personal access token is used.
 
+### Related-repository token boundary
+
+When trusted product scope is enabled, Guard does **not** broaden the triggering token.
+
+For each candidate related repository, it obtains a separate short-lived installation token restricted to that repository and asks only for:
+
+- Contents: read.
+
+That token is used to read the related default-branch product manifest, resolve the immutable default-branch revision, and scan the member snapshot. It is discarded after the stateless invocation.
+
 ## Pull-request evaluation
 
 The runtime first reads the PR file list.
 
 If no changed file uses a supported analysis suffix, Guard publishes a successful `IaaP Guard / Architecture` Check with an explicit no-relevant-changes result and does not perform the full repository continuity path.
+
+Supported suffixes are:
+
+```text
+.yaml  .yml  .json  .tf  .tofu  .hcl  .md  .py  .sh
+```
 
 When relevant files changed, the runtime evaluates the complete immutable repository state rather than isolated changed files because architecture rules may require relationships across product contracts, experience definitions, implementation, policy, and evidence.
 
@@ -133,7 +174,7 @@ The proposed change cannot nominate or replace its own continuity baseline.
 
 For a Check `rerequested` event, the runtime resolves the current pull request before establishing the base/head pair so the rerequest uses GitHub's current PR state rather than trusting stale user-supplied baseline metadata.
 
-The scanner still does not execute repository code.
+The scanner does not execute repository code.
 
 ## Evidence Continuity
 
@@ -155,6 +196,17 @@ The output can include:
 - introduced/resolved finding-evidence deltas; and
 - deterministic evidence digest.
 
+### Live Phase 14 acceptance
+
+Phase 14 is complete. The deployed App produced both required paths on one fresh PR:
+
+- non-Guard-material change → architecture PASS 100 + Evidence Continuity `SUPPORTED`;
+- controlled `IAP-P004` material change → architecture WARNING 67 + Evidence Continuity `REVIEW REQUIRED` + `human_review_required` disposition.
+
+The proof also preserved the existing repository Check conclusion semantics.
+
+Canonical evidence: [`Phase 14 live acceptance`](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json).
+
 ### Authority boundary
 
 Evidence Continuity is **advisory** in the current App contract.
@@ -174,21 +226,76 @@ A continuity result of `review_required` does not silently convert an otherwise 
 
 See `docs/EVIDENCE-CONTINUITY.md` and `docs/PR-BASE-EVIDENCE-CONTINUITY.md` for the detailed contracts.
 
+## Product-aware enrichment
+
+If the triggering repository carries a trusted default-branch `.iaap/product.yaml`, the product-aware runtime can append a Product Assessment and Product Improvement Plan to the same Check.
+
+### Product membership trust
+
+The triggering PR is not allowed to define or expand live federation by itself.
+
+Guard reads product membership from the triggering repository's default branch and requires every related repository to reciprocally publish the same normalized product identity and membership on its own default branch.
+
+Automatic V1 federation additionally requires:
+
+- the related repository is explicitly registered;
+- the triggering repository registers itself;
+- the related repository is under the same GitHub owner;
+- the related repository has the same visibility;
+- the IaaP Guard App installation can access the related repository;
+- the related repository has a resolvable default branch; and
+- the product contains no more than 12 registered repositories.
+
+A missing required member produces `INCOMPLETE` rather than silent omission.
+
+### Relationship evaluation
+
+Member repositories are scanned independently from immutable snapshots. Guard then builds a separate temporary relationship bundle containing only artifacts classified as `consumer-contract` or `experience`.
+
+The V1 relationship bundle is capped at **20 MB**. If it cannot be completed safely, the Product Assessment becomes `INCOMPLETE` and records `IAP-PR002`.
+
+The initial relationship rule is:
+
+- `IAP-C001` — consumer/storefront constraints must remain compatible with the canonical product contract.
+
+### Live Phase 12 acceptance
+
+Phase 12 is complete. The live proof demonstrated:
+
+- reciprocal default-branch membership across two real repositories;
+- 2/2 trusted federation;
+- both individual members scoring 100 while the logical product failed at 96 because of an `IAP-C001` cross-repository mismatch;
+- a generated product Improvement Plan;
+- targeted Backstage remediation; and
+- final federated SUCCESS 100 plus a separate primary-member SUCCESS 100 revalidation.
+
+Canonical evidence: [`Phase 12 live federation acceptance`](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json).
+
+### Check authority boundary
+
+Product-aware enrichment must preserve the repository Evidence Continuity section.
+
+The triggering repository result remains authoritative for the GitHub Check conclusion in V1. Product-level context is advisory and cannot silently turn an unrelated member problem into a new blocking merge policy.
+
+A future product-specific blocking Check would require a separate explicit product/governance decision.
+
 ## Check semantics
 
-The Check output includes repository identity, exact head SHA, rule catalog version, scoring version, score, finding count, rule IDs, paths, deterministic evidence, and recommendations.
+The Check output can include:
 
-For relevant PRs, the Check also includes the bounded Evidence Continuity section described above.
+- repository identity;
+- exact head SHA;
+- rule catalog version;
+- scoring version;
+- repository score and finding count;
+- rule IDs, paths, deterministic evidence, and recommendations;
+- PR-base Evidence Continuity;
+- Product Assessment member evidence, completeness, weakest-member score, relationship status, and product findings; and
+- Product Improvement Plan when findings exist.
 
 `external_id` is derived from PR number + immutable head SHA. Repeated delivery for the same revision updates the existing Guard Check rather than intentionally creating contradictory duplicates.
 
-A manual GitHub Check re-request re-evaluates the current PR through the same deterministic path.
-
-## Product-aware enrichment
-
-If trusted multi-repository product scope is available, the product-aware runtime may append product assessment and planning context to the same Check.
-
-That enrichment must preserve the repository Evidence Continuity section. Product-level context remains advisory and cannot silently replace the triggering repository's Check conclusion semantics.
+A manual GitHub Check rerequest re-evaluates the current PR through the same deterministic path.
 
 ## Repository snapshot safety
 
@@ -197,13 +304,16 @@ The beta places explicit bounds around untrusted repository archives:
 - compressed archive maximum: 25 MB;
 - archive member maximum: 20,000;
 - extracted regular-file bytes maximum: 100 MB;
+- individual analyzed file maximum: 1 MB;
 - absolute paths and `..` traversal are rejected;
 - symbolic links, hard links, devices, and FIFOs are rejected;
 - cross-host archive redirects do not retain the GitHub Authorization header.
 
+The scanner ignores common generated/vendor locations including `.git`, `.venv`, `venv`, `node_modules`, `vendor`, `dist`, `build`, `__pycache__`, `artifacts`, and `.work`.
+
 These are beta product limits, not claims of enterprise-scale repository support.
 
-## Deploy
+## Deploy — operator path
 
 Prerequisites:
 
@@ -237,6 +347,23 @@ After deployment, copy the `WebhookUrl` stack output into the GitHub App's Webho
 
 The endpoint also supports a simple `GET` health response. GitHub webhook processing requires `POST` with a valid signature.
 
+## Troubleshooting order
+
+When a user reports trouble, diagnose from the outside in rather than broadening permissions immediately:
+
+1. Did the App Check appear at all?
+2. Is the App installed with access to the triggering repository?
+3. Was the webhook delivered for a supported PR action?
+4. Does the PR change a supported analysis suffix when a full scan is expected?
+5. Can the base/head repository snapshots fit within beta limits?
+6. If product scope is expected, is `.iaap/product.yaml` already on the triggering default branch?
+7. Do all required members carry reciprocal trusted manifests?
+8. Are owner and visibility boundaries compatible?
+9. Does the App installation include every required member?
+10. Can the relationship bundle complete within 20 MB?
+
+See [`ADOPTION-PREREQUISITES.md`](ADOPTION-PREREQUISITES.md) for the full symptom-to-remediation table and support packet guidance.
+
 ## Beta limits and explicit exclusions
 
 The current beta does not add:
@@ -251,8 +378,9 @@ The current beta does not add:
 - legal or compliance authorization claims;
 - a SaaS dashboard;
 - organization analytics;
+- automatic cross-organization V1 federation;
 - Marketplace or billing;
 - FedRAMP/ATO claims;
 - production-readiness claims.
 
-The purpose is to prove useful GitHub-native architecture evidence, trusted base/head continuity, and accountable review signals before investing in broader hosted-system complexity.
+The purpose is to prove useful GitHub-native architecture evidence, trusted multi-repository product coherence, trusted base/head continuity, and accountable review signals before investing in broader hosted-system complexity.
