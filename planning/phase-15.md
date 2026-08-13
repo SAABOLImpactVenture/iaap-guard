@@ -2,20 +2,16 @@
 
 ## Status
 
-**IN REVIEW — implementation and live acceptance are not yet complete.**
-
-Phase 15 is complete only after implementation, merge, any required runtime deployment,
-live acceptance, and retained evidence. This plan does not claim completion from unit
-tests alone.
-
-## Frozen scope
+**COMPLETE — implemented, merged, deployed, live-accepted, and backed by retained evidence.**
 
 Phase 15 adds a deterministic `readiness-report/v1` diagnostic layer that answers
 whether Guard can meaningfully evaluate the intended repository or registered product
 scope. It does not add architecture rules, authorization, remediation, or infrastructure
 execution.
 
-The implementation will provide:
+## Frozen scope
+
+The implementation provides:
 
 - a network-free local repository readiness engine;
 - strict `schemas/readiness-report.schema.json` validation;
@@ -41,7 +37,7 @@ The implementation will provide:
 - V1 remains bounded to 12 product members, existing repository/archive limits, and the
   existing relationship-evidence bundle limit.
 
-## Intended readiness model
+## Readiness model
 
 Reports use `READY`, `READY_WITH_ADVISORIES`, `BLOCKED`, and `NOT_APPLICABLE` where a
 requirement is outside the evaluated mode. Every non-ready requirement records its
@@ -55,26 +51,30 @@ for local validation when the manifest is valid and self-registering; GitHub-onl
 access, visibility, reciprocity, immutable revision, and acquisition checks are reported
 as explicitly unevaluated until the GitHub-aware adapter runs.
 
-GitHub-aware preflight will diagnose the same trust/acquisition barriers already enforced
-by product federation before users mistake missing evidence for product health.
+GitHub-aware preflight diagnoses the same trust/acquisition barriers already enforced by
+product federation before users mistake missing evidence for product health.
 
 ## Validation contract
 
-Automated coverage will include ordinary single repositories, minimal/no evidence,
+Automated coverage includes ordinary single repositories, minimal/no evidence,
 malformed and invalid registration, duplicate/oversized/multiple-primary membership,
 self-membership, valid local registration, inaccessible/visibility-mismatched/missing or
 non-reciprocal GitHub members, complete products, optional-member advisory behavior,
 unchanged Check conclusions, and continuity-preserving rendering. The complete existing
-Phase 8–14 suite must remain green.
+Phase 8–14 suite remained green.
 
-## Live acceptance still required
+## Live acceptance completed
 
-After merge and deployment (the GitHub Check integration is a runtime change), a
-non-destructive campaign must retain evidence for:
+The deployed runtime completed the required non-destructive sequence:
 
-1. a correctly configured registered product reporting `READY`;
-2. a controlled inaccessible or mismatched required member reporting actionable
-   `BLOCKED` without broader permissions; and
-3. correction of that obstacle moving the same product to `READY` before normal Product
-   Assessment proceeds.
+1. a correctly configured registered product reported `READY`, with normal Product
+   Assessment;
+2. a controlled non-reciprocal required member reported actionable `BLOCKED` with
+   `IAP-RDY106`, without broader permissions and without changing the Architecture Check
+   conclusion; and
+3. restoring the exact reciprocal manifest returned the same product to `READY`, after
+   which normal Product Assessment proceeded again.
 
+Deployment and acceptance evidence are retained in the program hub at
+`artifacts/phase-15/acceptance-campaign.json`, merged as commit
+`4035993fee32cb58a8d9ca6edab8810a489514da`.
