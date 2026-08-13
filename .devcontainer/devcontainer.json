@@ -3,7 +3,7 @@
   "image": "mcr.microsoft.com/devcontainers/base:3.0.5-ubuntu24.04",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.12",
+      "version": "os-provided",
       "installTools": false
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
