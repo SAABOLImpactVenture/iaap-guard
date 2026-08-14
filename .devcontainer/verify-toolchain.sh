@@ -9,4 +9,6 @@ gh --version | head -n 1
 aws --version
 sam --version
 docker --version
+docker info >/dev/null
+docker compose version
 make validate
