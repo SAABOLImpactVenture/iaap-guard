@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if ! dpkg -s python3-venv >/dev/null 2>&1; then
+  sudo apt-get update
+  sudo apt-get install -y python3-venv
+fi
+
+python3 -m venv .venv
+source .venv/bin/activate
+
 if ! command -v make >/dev/null 2>&1; then
   sudo apt-get update
   sudo apt-get install -y make
