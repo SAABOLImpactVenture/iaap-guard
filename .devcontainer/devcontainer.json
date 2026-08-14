@@ -25,7 +25,15 @@
         "ms-python.python",
         "redhat.vscode-yaml",
         "github.vscode-github-actions"
-      ]
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
+      }
     }
+  },
+  "remoteEnv": {
+    "VIRTUAL_ENV": "${containerWorkspaceFolder}/.venv",
+    "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
   }
 }
