@@ -21,7 +21,9 @@ env/
 *.pfx
 .secrets/
 
-# AWS SAM local artifacts
+# AWS / SAM local artifacts
+.aws/
+.sam/
 .aws-sam/
 samconfig.toml
 
