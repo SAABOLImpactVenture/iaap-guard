@@ -14,6 +14,11 @@ It is diagnostic, not an architecture rule, authorization decision, or remediati
 engine. Readiness does not change architecture scoring, Check conclusions,
 `continuity/v1`, or `product-assessment/v1`.
 
+Readiness does not ingest an organization's OKRs, manage strategy or delivery work,
+provision infrastructure, or request customer infrastructure credentials. It inherits
+the canonical [V1 explicit exclusions](PRODUCT.md#explicit-exclusions); readiness
+diagnostics do not expand that product boundary.
+
 ## Local preflight
 
 Run without GitHub credentials or network access:
