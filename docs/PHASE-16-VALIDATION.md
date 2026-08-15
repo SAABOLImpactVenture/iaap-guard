@@ -106,11 +106,63 @@ bypass the rule, and force pushes and branch deletion are disabled.
 The required approving-review count remains zero for the single-maintainer public beta;
 this does not bypass the required pull-request path or required checks.
 
+## Clean-adopter validation
+
+A clean-adopter campaign was completed on `2026-08-15` using the temporary public
+repository
+[`SAABOLImpactVenture/iaap-guard-adopter-validation`](https://github.com/SAABOLImpactVenture/iaap-guard-adopter-validation).
+The repository was created without Guard-specific configuration and received only a
+minimal Terraform change on pull request
+[`#1`](https://github.com/SAABOLImpactVenture/iaap-guard-adopter-validation/pull/1)
+at revision `7bb6f811a7001233aaed861351eaf755df91b902`.
+
+### Installation and live result
+
+The repository was added explicitly to the existing selected-repository IaaP Guard
+installation. Closing and reopening the pull request emitted an eligible
+`pull_request.reopened` webhook. GitHub recorded the delivery, the Check creation, and
+the completed Check.
+
+The
+[`IaaP Guard / Architecture` Check](https://github.com/SAABOLImpactVenture/iaap-guard-adopter-validation/pull/1/checks?check_run_id=95076939126)
+completed in two seconds with a neutral `WARNING` conclusion, score `0`, and three
+expected findings for the intentionally incomplete Terraform-only fixture:
+
+- `IAP-P003` — no recognizable consumer product contract;
+- `IAP-G001` — no independently executable deterministic product-boundary validation;
+  and
+- `IAP-E001` — no machine-observable lifecycle evidence path.
+
+The Check rendered a deterministic improvement plan with three objectives, six key
+results, three epics, three features, three candidate stories, and twelve candidate
+tasks. Evidence Continuity correctly rendered `REVIEW REQUIRED` against the PR base
+without changing authorization or merge authority.
+
+### Troubleshooting and cleanup
+
+The campaign reproduced the most important first-installation diagnostic: selecting a
+repository in the installation picker does not grant access until the separate
+installation `Save` action succeeds. Before that save, GitHub sent no webhook and the
+pull request showed no Guard Check. After the saved installation contained four
+repositories, the next eligible event produced the Check normally.
+
+No adopter AWS credentials, cloud credentials, workflow installation, repository
+secrets, Guard configuration, or write authority were required. After validation:
+
+- pull request `#1` was closed;
+- the temporary repository was removed from the App installation;
+- the installation returned to its original three repositories; and
+- the validation repository was archived read-only rather than deleted, retaining the
+  public evidence and allowing reversible recovery.
+
+This campaign validates installation, first-result interpretation, troubleshooting,
+removal, and operator cleanup from a clean adopter perspective.
+
 ## Boundary confirmation
 
 This verification establishes beta operability only. It does not give IaaP Guard
 infrastructure provisioning, remediation, deployment, exception, compliance,
 risk-acceptance, pull-request, or merge authority.
 
-Phase 16 remains open until its remaining reproducibility, documentation, final
+Phase 16 remains open until its remaining documentation-consistency, final
 closure-record, and complete validation key results are satisfied.
