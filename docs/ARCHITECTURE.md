@@ -302,11 +302,12 @@ Release status, operational and security controls, adopter reproducibility, supp
 rollback procedures, V1 boundaries, and final protected validation are reconciled and
 retained without adding product scope.
 
-### Phase 17 — External Adoption Validation — IN PROGRESS
+### Phase 17 — External Adoption Validation — COMPLETE
 
-Validate installation, rule quality, usability, and runtime behavior against independent
-or unfamiliar infrastructure repositories. Correct defects and material rule-quality
-problems, then freeze the V1 rule and output contracts.
+A read-only deterministic campaign scanned independent AWS, Azure, and Google Cloud
+Terraform modules at immutable revisions. All findings were adjudicated, no material
+rule-quality defect was found, and the V1 rule, schema, scoring, planning, and authority
+contracts were frozen.
 
 ### Phase 18 — V1 Product Completion — PLANNED
 
