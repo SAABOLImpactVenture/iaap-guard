@@ -374,8 +374,8 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - **PHASE 13 — Evidence Continuity Core: COMPLETE**
 - **PHASE 14 — PR-base Evidence Continuity: COMPLETE**
 - **PHASE 15 — Adoption Readiness / Preflight: COMPLETE**
-- **PHASE 16 — Public Beta Closure: IN PROGRESS**
+- **PHASE 16 — Public Beta Closure: COMPLETE**
 - **PHASE 17 — External Adoption Validation: PLANNED**
 - **PHASE 18 — V1 Product Completion: PLANNED**
 
-Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phases 16–18 close the beta, validate independent adoption, and publish the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
+Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phase 16 is closed by retained operational, security, clean-adopter, boundary-consistency, and protected-validation evidence. Phases 17–18 validate independent adoption and publish the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.

@@ -2,7 +2,7 @@
 
 ## Status
 
-**IN PROGRESS**
+**COMPLETE**
 
 ## Objective
 
@@ -22,8 +22,9 @@ management, or another cloud-management platform.
 - [x] Intentional V1 limits and explicit exclusions are consistent across product,
   architecture, adoption, security, and App documentation, as retained in
   `docs/PHASE-16-VALIDATION.md`.
-- [ ] A final beta-closure validation record is retained.
-- [ ] The complete deterministic validation suite and GitHub checks pass.
+- [x] A final beta-closure validation record is retained in
+  `docs/PHASE-16-VALIDATION.md`.
+- [x] The complete deterministic validation suite and GitHub checks pass.
 
 ## Frozen product boundary
 
