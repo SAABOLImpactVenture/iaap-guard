@@ -171,23 +171,31 @@ See [`ADOPTION-PREREQUISITES.md`](ADOPTION-PREREQUISITES.md) for the practical a
 
 ## Explicit exclusions
 
+This section is the canonical V1 product boundary. Other product, architecture, adoption,
+security, and GitHub App documents may summarize context-specific parts of this list but
+do not override or expand it.
+
 IaaP Guard does not provide:
 
-- cloud provisioning or remediation;
-- cloud, Kubernetes, Terraform/TFE or customer credential access;
+- organizational OKR ingestion or enterprise strategy management;
+- issue, backlog, sprint, assignment, estimation, capacity, or project management;
+- cloud provisioning, reconciliation, remediation, or infrastructure execution;
+- cloud, Kubernetes, Terraform/TFE, AI, or other customer credential access;
 - Terraform state inspection;
-- secret, CVE or generic IaC vulnerability scanning;
-- NIST, FedRAMP, SOC 2 or other compliance determinations;
-- legal or institutional authorization determinations;
+- secret, CVE, or generic IaC vulnerability scanning;
+- NIST, FedRAMP, ATO, SOC 2, or other compliance determinations;
+- legal, institutional, deployment, exception, risk-acceptance, or disposition authority;
 - autonomous disposition of changed evidence;
 - AI-generated scoring verdicts;
-- autonomous code changes, pull requests, approvals or merges;
-- branch-protection or ruleset administration;
-- organization-wide dashboards or historical trend storage;
+- autonomous code changes, pull requests, approvals, or merges;
+- repository edits, branch-protection administration, or ruleset administration;
+- a persistent customer database, organization-wide dashboard, portfolio analytics, or
+  historical trend storage;
 - portfolio discovery by crawling unregistered repositories;
-- cross-organization V1 federation;
-- Marketplace billing;
-- live reconciliation validation;
+- automatic cross-organization V1 federation;
+- Marketplace listing, billing, or monetization;
+- production-readiness claims;
+- live reconciliation validation; or
 - a claim that Terraform or TFE has no legitimate role.
 
 ## Authority model
