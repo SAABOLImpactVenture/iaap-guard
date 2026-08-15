@@ -185,6 +185,22 @@ repository mutation, automated authorization or remediation, persistent customer
 analytics, automatic cross-organization V1 federation, Marketplace billing, compliance
 claims, and production-readiness claims.
 
+## Final closure candidate
+
+The Phase 16 closure candidate is based on `main` commit
+`d520b905721dd0f35118bd67b1e93a54ee218e39` on `2026-08-15`.
+
+The retained Phase 16 record now covers deployed operational verification, the
+least-privilege security and dependency review, a reversible clean-adopter campaign,
+and a cross-document V1 boundary review. The complete deterministic suite previously
+passed all 85 tests, and protected pull requests through boundary-consistency PR
+[#44](https://github.com/SAABOLImpactVenture/iaap-guard/pull/44) completed the required
+validation, dogfood, dependency-review, and CodeQL checks.
+
+Phase 16 will be declared complete only after the pull request carrying this final
+closure declaration passes the same protected checks. Until then, the two final key
+results remain open.
+
 ## Boundary confirmation
 
 This verification establishes beta operability only. It does not give IaaP Guard
