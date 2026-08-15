@@ -16,8 +16,9 @@ management, or another cloud-management platform.
 - [x] The deployed beta health, alarms, logging, concurrency, secrets, and rollback path
   are verified and documented in `docs/PHASE-16-VALIDATION.md`.
 - [x] Security, dependency, permission, workflow, and action-pinning controls pass review.
-- [ ] Installation, removal, adoption, troubleshooting, and operator instructions are
-  reproducible from a clean adopter perspective.
+- [x] Installation, removal, adoption, troubleshooting, and operator instructions are
+  reproducible from a clean adopter perspective, as retained in
+  `docs/PHASE-16-VALIDATION.md`.
 - [ ] Intentional V1 limits and explicit exclusions are consistent across product,
   architecture, adoption, security, and App documentation.
 - [ ] A final beta-closure validation record is retained.
