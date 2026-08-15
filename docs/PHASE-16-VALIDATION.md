@@ -49,11 +49,68 @@ contract checks.
 No AWS credentials, secret values, infrastructure mutations, or expanded product
 authority are part of this evidence.
 
+## Security control review
+
+The Phase 16 security-control review was completed against `main` commit
+`4a6ad20` on `2026-08-15`.
+
+### Dependency controls
+
+Dependabot high-severity alert
+[`#1`](https://github.com/SAABOLImpactVenture/iaap-guard/security/dependabot/1)
+was resolved by pull request
+[`#41`](https://github.com/SAABOLImpactVenture/iaap-guard/pull/41), which upgraded
+`cryptography` from `49.0.0` to patched release `50.0.0`.
+
+The declared application and CI dependency sets installed successfully in a clean
+Python 3.12 virtual environment, `pip check` reported no broken requirements, and all
+85 deterministic tests passed.
+
+### GitHub Actions controls
+
+Repository Actions settings allow only selected actions and reusable workflows.
+GitHub-owned actions are allowed, Marketplace actions are not broadly trusted, and the
+third-party allowlist is limited to:
+
+- `aws-actions/configure-aws-credentials@*`;
+- `aws-actions/setup-sam@*`; and
+- `devcontainers/ci@*`.
+
+Full-length commit SHA pinning is enforced. Every external action reference in the
+repository is pinned to a full commit SHA. Workflows declare explicit permissions;
+ordinary validation workflows use `contents: read`, and only the AWS OIDC workflow adds
+the required `id-token: write`.
+
+The default workflow token is read-only for repository contents and packages. GitHub
+Actions cannot create or approve pull requests.
+
+### GitHub App controls
+
+The live IaaP Guard GitHub App matches the tested least-privilege contract:
+
+- Checks: read and write;
+- Contents: read-only;
+- Pull requests: read-only;
+- Metadata: mandatory read-only;
+- all other repository, organization, account, and enterprise permissions: no access;
+  and
+- subscribed events: only Check run and Pull request.
+
+### Protected branch controls
+
+The `main` branch requires the pull-request path, dismisses stale approvals, requires an
+up-to-date branch, and requires `validate-core`, `dogfood-action`,
+`dependency-review`, and `CodeQL`. Conversations must be resolved, administrators cannot
+bypass the rule, and force pushes and branch deletion are disabled.
+
+The required approving-review count remains zero for the single-maintainer public beta;
+this does not bypass the required pull-request path or required checks.
+
 ## Boundary confirmation
 
 This verification establishes beta operability only. It does not give IaaP Guard
 infrastructure provisioning, remediation, deployment, exception, compliance,
 risk-acceptance, pull-request, or merge authority.
 
-Phase 16 remains open until its remaining security, reproducibility, documentation,
-final closure-record, and complete validation key results are satisfied.
+Phase 16 remains open until its remaining reproducibility, documentation, final
+closure-record, and complete validation key results are satisfied.

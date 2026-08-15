@@ -15,7 +15,7 @@ management, or another cloud-management platform.
 - [x] Repository status documentation consistently records Phases 10 and 15 as complete.
 - [x] The deployed beta health, alarms, logging, concurrency, secrets, and rollback path
   are verified and documented in `docs/PHASE-16-VALIDATION.md`.
-- [ ] Security, dependency, permission, workflow, and action-pinning controls pass review.
+- [x] Security, dependency, permission, workflow, and action-pinning controls pass review.
 - [ ] Installation, removal, adoption, troubleshooting, and operator instructions are
   reproducible from a clean adopter perspective.
 - [ ] Intentional V1 limits and explicit exclusions are consistent across product,
