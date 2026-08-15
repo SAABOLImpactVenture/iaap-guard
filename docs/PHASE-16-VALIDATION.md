@@ -2,8 +2,8 @@
 
 ## Status
 
-**IN PROGRESS — deployed beta operational verification is complete; remaining Phase 16
-closure key results are still pending.**
+**COMPLETE — public-beta closure evidence, controls, reproducibility, boundaries, and
+protected validation are complete.**
 
 ## Operational verification
 
@@ -197,9 +197,11 @@ passed all 85 tests, and protected pull requests through boundary-consistency PR
 [#44](https://github.com/SAABOLImpactVenture/iaap-guard/pull/44) completed the required
 validation, dogfood, dependency-review, and CodeQL checks.
 
-Phase 16 will be declared complete only after the pull request carrying this final
-closure declaration passes the same protected checks. Until then, the two final key
-results remain open.
+The first protected check run for closure PR
+[#45](https://github.com/SAABOLImpactVenture/iaap-guard/pull/45) completed successfully:
+the deterministic validation and dogfood jobs, Dependency Review, and CodeQL all passed.
+This completion declaration is therefore carried on a fresh PR head and must pass those
+same protected checks once more before merge.
 
 ## Boundary confirmation
 
@@ -207,5 +209,5 @@ This verification establishes beta operability only. It does not give IaaP Guard
 infrastructure provisioning, remediation, deployment, exception, compliance,
 risk-acceptance, pull-request, or merge authority.
 
-Phase 16 remains open until its final closure record and complete validation key
-results are satisfied.
+Phase 16 is complete. Phase 17 may validate independent adoption and rule quality
+without reopening the frozen V1 authority boundary.
