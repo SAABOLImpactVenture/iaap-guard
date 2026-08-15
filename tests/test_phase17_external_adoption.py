@@ -34,6 +34,25 @@ class Phase17ExternalAdoptionTests(unittest.TestCase):
             "sourceUrl": f"https://github.com/{name}",
         }
 
+    def test_repository_campaign_is_pinned_and_cross_cloud(self):
+        campaign = MODULE.load_campaign(ROOT / "config" / "external-adoption-v1.json")
+        self.assertEqual(len(campaign["repositories"]), 3)
+        self.assertEqual(
+            {item["ecosystem"] for item in campaign["repositories"]},
+            {"aws", "azure", "gcp"},
+        )
+        self.assertTrue(all(MODULE.SHA_RE.fullmatch(item["revision"]) for item in campaign["repositories"]))
+
+    def test_workflow_is_manual_read_only_and_sha_pinned(self):
+        workflow = (ROOT / ".github" / "workflows" / "external-adoption.yml").read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("test \"$GITHUB_REF\" = \"refs/heads/main\"", workflow)
+        self.assertIn("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", workflow)
+        self.assertIn("actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f", workflow)
+        self.assertNotIn("pull_request:", workflow)
+        self.assertNotIn("id-token: write", workflow)
+
     def test_manifest_requires_immutable_revision(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
