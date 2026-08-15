@@ -1,0 +1,89 @@
+name: Phase 17 external adoption validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-adoption:
+    name: pinned external adoption campaign
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Check out IaaP Guard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install deterministic dependencies
+        run: python3 -m pip install --disable-pip-version-check -r requirements-ci.txt
+
+      - name: Check out pinned public repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p external-adoption
+          python3 - <<'PY' > external-adoption/repositories.tsv
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("config/external-adoption-v1.json").read_text())
+          for item in manifest["repositories"]:
+              slug = item["repository"].replace("/", "__")
+              print(item["repository"], item["revision"], slug, sep="\t")
+          PY
+
+          while IFS=$'\t' read -r repository revision slug; do
+            target="external-adoption/$slug"
+            git init --quiet "$target"
+            git -C "$target" remote add origin "https://github.com/$repository.git"
+            git -C "$target" fetch --quiet --depth=1 origin "$revision"
+            git -C "$target" checkout --quiet --detach FETCH_HEAD
+            test "$(git -C "$target" rev-parse HEAD)" = "$revision"
+          done < external-adoption/repositories.tsv
+
+      - name: Run read-only external adoption campaign
+        env:
+          PYTHONPATH: src
+        run: |
+          python3 scripts/run_external_adoption.py \
+            --manifest config/external-adoption-v1.json \
+            --workspace external-adoption \
+            --output artifacts/phase-17/external-adoption.json
+
+      - name: Summarize campaign
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+
+          campaign = json.loads(Path("artifacts/phase-17/external-adoption.json").read_text())
+          print("# IaaP Guard Phase 17 external adoption")
+          print()
+          print(f"- repositories: {campaign['repositoryCount']}")
+          print(f"- ecosystems: {', '.join(campaign['ecosystems'])}")
+          print()
+          print("| Repository | Revision | Conclusion | Score | Findings |")
+          print("|---|---|---:|---:|---:|")
+          for item in campaign["results"]:
+              score = "N/A" if item["overallScore"] is None else item["overallScore"]
+              print(
+                  f"| {item['repository']} | `{item['revision'][:12]}` | "
+                  f"{item['conclusion']} | {score} | {item['findingCount']} |"
+              )
+          PY
+
+      - name: Upload retained campaign evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: phase-17-external-adoption-${{ github.run_id }}
+          path: artifacts/phase-17/external-adoption.json
+          if-no-files-found: error
+          retention-days: 90
