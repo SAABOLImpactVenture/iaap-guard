@@ -139,6 +139,18 @@ class Phase10ContractTests(unittest.TestCase):
             self.assertNotIn("OKActions", properties)
             self.assertNotIn("InsufficientDataActions", properties)
 
+    def test_oidc_workflow_has_read_only_beta_verification(self):
+        text = (
+            ROOT / ".github/workflows/deploy-aws-beta.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("- verify", text)
+        self.assertIn("inputs.operation == 'verify'", text)
+        self.assertIn("cloudformation get-template", text)
+        self.assertIn("cloudformation describe-stack-resources", text)
+        self.assertIn("scripts/verify_beta_stack.py", text)
+        self.assertNotIn("secretsmanager get-secret-value", text.lower())
+        self.assertNotIn("aws login", text.lower())
+
     def test_runtime_dependencies_are_pinned(self):
         requirements = (ROOT / "requirements-app.txt").read_text(encoding="utf-8").splitlines()
         self.assertEqual(
