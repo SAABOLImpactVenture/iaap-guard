@@ -302,7 +302,7 @@ Release status, operational and security controls, adopter reproducibility, supp
 rollback procedures, V1 boundaries, and final protected validation are reconciled and
 retained without adding product scope.
 
-### Phase 17 — External Adoption Validation — PLANNED
+### Phase 17 — External Adoption Validation — IN PROGRESS
 
 Validate installation, rule quality, usability, and runtime behavior against independent
 or unfamiliar infrastructure repositories. Correct defects and material rule-quality
