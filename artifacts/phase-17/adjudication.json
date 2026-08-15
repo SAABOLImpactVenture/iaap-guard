@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "external-adoption-adjudication/v1",
+  "campaignRunId": 31912538972,
+  "campaignHeadSha": "24638ca86089b4d1371a3de90b3aead858cd22e8",
+  "sourceArtifactSha256": "7efb6848e97762b799e2ea74ff961372be7572fc135f965d3507dff16c43109d",
+  "findingCount": 9,
+  "summary": {
+    "useful": 0,
+    "contextDependent": 9,
+    "falsePositive": 0,
+    "outsideV1Contract": 0,
+    "materialRuleDefects": 0
+  },
+  "adjudications": [
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "revision": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+      "ruleId": "IAP-P003",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "revision": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+      "ruleId": "IAP-G001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "revision": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+      "ruleId": "IAP-E001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "revision": "c8c984f60c61981b2cc4039471537de4995961b9",
+      "ruleId": "IAP-P003",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "revision": "c8c984f60c61981b2cc4039471537de4995961b9",
+      "ruleId": "IAP-G001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "revision": "c8c984f60c61981b2cc4039471537de4995961b9",
+      "ruleId": "IAP-E001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "revision": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+      "ruleId": "IAP-P003",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "revision": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+      "ruleId": "IAP-G001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "revision": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+      "ruleId": "IAP-E001",
+      "classification": "context-dependent",
+      "disposition": "expected for a standalone infrastructure module; useful when evaluating a repository that claims to be a complete Infrastructure-as-a-Product product",
+      "materialRuleDefect": false
+    }
+  ]
+}
