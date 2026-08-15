@@ -66,7 +66,7 @@ For Phase 15 live acceptance:
 5. verify the deployed stack is healthy; and
 6. perform the separately staged READY -> BLOCKED -> READY live acceptance campaign.
 
-Phase 15 remains `IN REVIEW` until deployment and retained live acceptance evidence are complete.
+Phase 15 is complete; deployment and retained live acceptance evidence are documented in [`PHASE-15-VALIDATION.md`](PHASE-15-VALIDATION.md) and [`planning/phase-15.md`](../planning/phase-15.md).
 
 ## Root account boundary
 

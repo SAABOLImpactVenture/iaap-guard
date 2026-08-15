@@ -270,9 +270,9 @@ The local deterministic core, rule catalog, normalized result contract, fixture 
 
 The same core was wrapped by a thin GitHub Action and dogfooded across the six-repository IaaP portfolio. Accepted baselines, repeatability, and critical mutation coverage were frozen under `artifacts/phase-9/`.
 
-### Phase 10 — Public installable beta — IN PROGRESS
+### Phase 10 — Public installable beta — COMPLETE
 
-The deterministic core is wrapped by a stateless public GitHub App adapter using narrow GitHub permissions, immutable repository snapshots, bounded input handling, and operator guardrails.
+The deterministic core is wrapped by a stateless public GitHub App adapter using narrow GitHub permissions, immutable repository snapshots, bounded input handling, and operator guardrails. The App is deployed, publicly installable, and live-proven.
 
 ### Phase 11 — Evidence-to-planning layer — COMPLETE
 
@@ -290,11 +290,27 @@ Explicit product manifests, reciprocal trust, bounded federation, cross-reposito
 
 The deployed GitHub App derives the technical baseline from the immutable PR base SHA, compares it with the PR head SHA, and publishes Evidence Continuity in the existing Architecture Check while preserving the existing Check conclusion authority boundary. Both `SUPPORTED` and `REVIEW REQUIRED` live paths have been proven.
 
-### Phase 15 — Adoption Readiness / Preflight — IN REVIEW
+### Phase 15 — Adoption Readiness / Preflight — COMPLETE
 
 Deterministic repository preflight, GitHub-aware product diagnostics, and advisory Check
-composition are implemented. Merge, runtime deployment, live acceptance, and retained
-evidence remain required before completion.
+composition are implemented, merged, deployed, and live-accepted through the retained
+READY → BLOCKED → READY campaign.
+
+### Phase 16 — Public Beta Closure — IN PROGRESS
+
+Reconcile release status, verify operational and security controls, document support and
+rollback procedures, and retain final beta-closure evidence without adding product scope.
+
+### Phase 17 — External Adoption Validation — PLANNED
+
+Validate installation, rule quality, usability, and runtime behavior against independent
+or unfamiliar infrastructure repositories. Correct defects and material rule-quality
+problems, then freeze the V1 rule and output contracts.
+
+### Phase 18 — V1 Product Completion — PLANNED
+
+Publish the bounded V1 release, support and upgrade policies, known limits, final
+acceptance evidence, and an explicit completion declaration.
 
 ## Public App authority
 

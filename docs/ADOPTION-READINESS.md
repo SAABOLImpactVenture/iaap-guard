@@ -2,9 +2,8 @@
 
 ## Status
 
-**Phase 15 — IN REVIEW.** Implementation exists, but merge, deployed-runtime validation,
-live acceptance, and retained evidence are still required before Phase 15 can be called
-complete.
+**Phase 15 — COMPLETE.** The implementation is merged, deployed, live-accepted,
+and backed by retained READY → BLOCKED → READY evidence.
 
 ## Product question
 
