@@ -361,14 +361,16 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 
 ## Current status
 
-**PHASE 8 — Deterministic Core: COMPLETE**  
-**PHASE 9 — Dogfood POC: COMPLETE**  
-**PHASE 10 — Public Installable Beta: IN PROGRESS**  
-**PHASE 11 — Evidence-to-Planning Layer: COMPLETE**  
-**PHASE 12 — Multi-Repository Product Scope: COMPLETE**  
-**PHASE 13 — Evidence Continuity Core: COMPLETE**  
-**PHASE 14 — PR-base Evidence Continuity: COMPLETE**
+- **PHASE 8 — Deterministic Core: COMPLETE**
+- **PHASE 9 — Dogfood POC: COMPLETE**
+- **PHASE 10 — Public Installable Beta: COMPLETE**
+- **PHASE 11 — Evidence-to-Planning Layer: COMPLETE**
+- **PHASE 12 — Multi-Repository Product Scope: COMPLETE**
+- **PHASE 13 — Evidence Continuity Core: COMPLETE**
+- **PHASE 14 — PR-base Evidence Continuity: COMPLETE**
+- **PHASE 15 — Adoption Readiness / Preflight: COMPLETE**
+- **PHASE 16 — Public Beta Closure: IN PROGRESS**
+- **PHASE 17 — External Adoption Validation: PLANNED**
+- **PHASE 18 — V1 Product Completion: PLANNED**
 
-**PHASE 15 — Adoption Readiness / Preflight: IN REVIEW**
-
-Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change.
+Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phases 16–18 close the beta, validate independent adoption, and publish the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
