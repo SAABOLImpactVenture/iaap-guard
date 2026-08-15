@@ -15,11 +15,20 @@ The GitHub App runtime permissions are unchanged. This workflow does not expand 
 
 ## Manual operations
 
-The workflow `.github/workflows/deploy-aws-beta.yml` is intentionally `workflow_dispatch` only and supports three operations.
+The workflow `.github/workflows/deploy-aws-beta.yml` is intentionally `workflow_dispatch` only and supports four operations.
 
 ### `identity`
 
 Authenticates through GitHub OIDC and verifies the assumed AWS identity plus the current `iaap-guard-beta` stack state. It does not build, upload, create a change set, or modify AWS resources.
+
+### `verify`
+
+Authenticates through GitHub OIDC and performs a read-only verification of the deployed
+beta contract. It checks the stable CloudFormation stack status, expected Lambda/log/alarm
+resources, deployed 14-day log retention and alarm definitions, concurrency parameters,
+two distinct Secrets Manager ARN references, and the public health response. It does not
+retrieve secret values, build or upload artifacts, create or execute a change set, or
+modify AWS resources.
 
 ### `plan`
 

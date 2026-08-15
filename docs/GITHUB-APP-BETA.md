@@ -121,6 +121,10 @@ Some low-quota or new AWS accounts cannot allocate the default reserved concurre
 
 The stack explicitly manages the function's CloudWatch Logs log group with **14-day retention**. It also creates CloudWatch alarms for any Lambda Errors, any Lambda Throttles, and maximum Duration at or above **50 seconds** against the 60-second function timeout. Missing metric data is treated as not breaching. The alarms intentionally have no notification actions in this phase; notification routing remains a later operational decision.
 
+Operators can run the GitHub OIDC deployment workflow with `operation=verify` to check
+the deployed CloudFormation resources, operational parameters, secret ARN references,
+and public health contract without retrieving secret values or modifying AWS resources.
+
 ## Authentication flow
 
 For each handled delivery:

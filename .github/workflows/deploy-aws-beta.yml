@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - identity
+          - verify
           - plan
           - deploy
       expected_sha:
@@ -104,6 +105,43 @@ jobs:
             --region "$AWS_REGION" \
             --query 'Stacks[0].{Name:StackName,Status:StackStatus}' \
             --output table
+
+      - name: Verify deployed beta operational contract
+        if: ${{ inputs.operation == 'verify' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STACK_FILE="$RUNNER_TEMP/stack.json"
+          TEMPLATE_FILE="$RUNNER_TEMP/template.json"
+          RESOURCES_FILE="$RUNNER_TEMP/resources.json"
+          HEALTH_FILE="$RUNNER_TEMP/health.json"
+
+          aws cloudformation describe-stacks             --stack-name "$STACK_NAME"             --region "$AWS_REGION"             --output json > "$STACK_FILE"
+
+          aws cloudformation get-template             --stack-name "$STACK_NAME"             --region "$AWS_REGION"             --template-stage Processed             --output json > "$TEMPLATE_FILE"
+
+          aws cloudformation describe-stack-resources             --stack-name "$STACK_NAME"             --region "$AWS_REGION"             --output json > "$RESOURCES_FILE"
+
+          WEBHOOK_URL="$(aws cloudformation describe-stacks             --stack-name "$STACK_NAME"             --region "$AWS_REGION"             --query 'Stacks[0].Outputs[?OutputKey==`WebhookUrl`]|[0].OutputValue'             --output text)"
+
+          curl             --fail             --silent             --show-error             --max-time 15             "$WEBHOOK_URL" > "$HEALTH_FILE"
+
+          python3 scripts/verify_beta_stack.py             --stack "$STACK_FILE"             --template "$TEMPLATE_FILE"             --resources "$RESOURCES_FILE"             --health "$HEALTH_FILE" | tee "$RUNNER_TEMP/beta-verification.txt"
+
+          {
+            echo "## IaaP Guard beta operational verification"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/beta-verification.txt"
+            echo '```'
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Stack: \`$STACK_NAME\`"
+            echo "- Region: \`$AWS_REGION\`"
+            echo "- Secret values retrieved: no"
+            echo "- AWS resources modified: no"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up AWS SAM CLI
         if: ${{ inputs.operation == 'plan' }}
