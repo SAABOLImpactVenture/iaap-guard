@@ -379,8 +379,13 @@ See [`ADOPTION-PREREQUISITES.md`](ADOPTION-PREREQUISITES.md) for the full sympto
 
 ## Beta limits and explicit exclusions
 
+The canonical V1 product boundary is
+[`PRODUCT.md#explicit-exclusions`](PRODUCT.md#explicit-exclusions). The App-specific
+summary below narrows runtime expectations and does not override or expand that boundary.
+
 The current beta does not add:
 
+- organizational OKR ingestion, enterprise strategy management, or work management;
 - a persistent customer database;
 - customer cloud, Kubernetes, Terraform/TFE, or AI credentials;
 - provisioning or reconciliation;

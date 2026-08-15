@@ -312,6 +312,16 @@ problems, then freeze the V1 rule and output contracts.
 Publish the bounded V1 release, support and upgrade policies, known limits, final
 acceptance evidence, and an explicit completion declaration.
 
+## Canonical V1 boundary
+
+Architecture constraints inherit the complete
+[`PRODUCT.md#explicit-exclusions`](PRODUCT.md#explicit-exclusions) boundary. The
+architecture does not introduce organizational OKR ingestion, work management,
+infrastructure execution, customer infrastructure credentials, persistent customer
+state, automated authorization, or cross-organization V1 federation. Context-specific
+architecture and adapter notes below narrow implementation authority; they do not expand
+the product contract.
+
 ## Public App authority
 
 The GitHub App authority remains narrow:

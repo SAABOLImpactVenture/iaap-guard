@@ -312,6 +312,11 @@ The App authority is frozen in `config/github-app-v0.json`:
 - no workflow/administration permissions;
 - no cloud, Kubernetes, Terraform/TFE, or AI credentials.
 
+The canonical V1 exclusions are maintained in
+[`docs/PRODUCT.md#explicit-exclusions`](docs/PRODUCT.md#explicit-exclusions). In
+particular, Guard does not ingest organizational OKRs, manage enterprise strategy or
+team work, execute infrastructure, or acquire customer infrastructure credentials.
+
 The initial hosting implementation uses AWS Lambda + Function URL. Hosting remains replaceable and is not part of the rule engine or consumer contract.
 
 See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).

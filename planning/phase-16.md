@@ -19,8 +19,9 @@ management, or another cloud-management platform.
 - [x] Installation, removal, adoption, troubleshooting, and operator instructions are
   reproducible from a clean adopter perspective, as retained in
   `docs/PHASE-16-VALIDATION.md`.
-- [ ] Intentional V1 limits and explicit exclusions are consistent across product,
-  architecture, adoption, security, and App documentation.
+- [x] Intentional V1 limits and explicit exclusions are consistent across product,
+  architecture, adoption, security, and App documentation, as retained in
+  `docs/PHASE-16-VALIDATION.md`.
 - [ ] A final beta-closure validation record is retained.
 - [ ] The complete deterministic validation suite and GitHub checks pass.
 
