@@ -158,11 +158,38 @@ secrets, Guard configuration, or write authority were required. After validation
 This campaign validates installation, first-result interpretation, troubleshooting,
 removal, and operator cleanup from a clean adopter perspective.
 
+## V1 boundary consistency review
+
+The Phase 16 V1 boundary review was completed against `main` commit
+`0d28efacd03c88746afb5fb355329727a1c1bd91` on `2026-08-15`.
+
+`docs/PRODUCT.md#explicit-exclusions` is now the canonical V1 boundary. README,
+architecture, adoption-readiness, adopter-prerequisite, security, and GitHub App
+documentation explicitly inherit that boundary rather than defining independent scope.
+
+The review confirmed consistent public-beta limits:
+
+- at most 12 registered repositories per logical product;
+- same-owner and same-visibility automatic V1 federation;
+- a 20 MB cross-repository relationship bundle;
+- 25 MB compressed repository archives;
+- 20,000 archive members;
+- 100 MB extracted regular-file bytes;
+- 1 MB per analyzed file; and
+- supported full-scan suffixes limited to `.yaml`, `.yml`, `.json`, `.tf`,
+  `.tofu`, `.hcl`, `.md`, `.py`, and `.sh`.
+
+The documents consistently exclude organizational OKR ingestion, enterprise strategy
+and work management, infrastructure execution, customer infrastructure credentials,
+repository mutation, automated authorization or remediation, persistent customer
+analytics, automatic cross-organization V1 federation, Marketplace billing, compliance
+claims, and production-readiness claims.
+
 ## Boundary confirmation
 
 This verification establishes beta operability only. It does not give IaaP Guard
 infrastructure provisioning, remediation, deployment, exception, compliance,
 risk-acceptance, pull-request, or merge authority.
 
-Phase 16 remains open until its remaining documentation-consistency, final
-closure-record, and complete validation key results are satisfied.
+Phase 16 remains open until its final closure record and complete validation key
+results are satisfied.
