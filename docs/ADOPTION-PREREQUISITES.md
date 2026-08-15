@@ -61,7 +61,10 @@ Using the GitHub App does **not** require the team to provide:
 - a persistent customer database; or
 - permission for Guard to provision, remediate, approve, merge, or deploy anything.
 
-Guard reads GitHub repository evidence and writes only its GitHub Check.
+Guard reads GitHub repository evidence and writes only its GitHub Check. It does not
+ingest organizational OKRs, manage delivery work, or execute infrastructure. The
+complete canonical boundary is
+[`PRODUCT.md#explicit-exclusions`](PRODUCT.md#explicit-exclusions).
 
 ## Single-repository prerequisites
 
