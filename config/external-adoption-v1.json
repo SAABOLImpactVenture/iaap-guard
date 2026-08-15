@@ -1,0 +1,23 @@
+{
+  "campaignVersion": "external-adoption/v1",
+  "repositories": [
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "revision": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+      "ecosystem": "aws",
+      "sourceUrl": "https://github.com/terraform-aws-modules/terraform-aws-vpc"
+    },
+    {
+      "repository": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "revision": "c8c984f60c61981b2cc4039471537de4995961b9",
+      "ecosystem": "azure",
+      "sourceUrl": "https://github.com/Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet"
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "revision": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+      "ecosystem": "gcp",
+      "sourceUrl": "https://github.com/terraform-google-modules/terraform-google-network"
+    }
+  ]
+}
