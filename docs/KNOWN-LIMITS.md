@@ -16,8 +16,10 @@ IaaP Guard V1 is bounded decision support, not a universal infrastructure scanne
 - Reciprocal trusted default-branch manifests and App access are required for every
   federated member.
 
-Unsupported or incomplete evidence fails closed or becomes `INCOMPLETE`; it is not
-silently treated as healthy.
+Required product evidence that cannot be obtained within supported bounds fails closed
+or becomes `INCOMPLETE`. Files with unsupported suffixes are not analyzed; a pull request
+changing only unsupported suffixes receives the documented successful `No relevant
+changes` result.
 
 ## Interpretation limits
 
