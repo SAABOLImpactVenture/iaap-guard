@@ -1,0 +1,578 @@
+{
+  "campaignVersion": "external-adoption/v1",
+  "repositoryCount": 3,
+  "ecosystems": [
+    "aws",
+    "azure",
+    "gcp"
+  ],
+  "results": [
+    {
+      "repository": "terraform-aws-modules/terraform-aws-vpc",
+      "revision": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+      "ecosystem": "aws",
+      "sourceUrl": "https://github.com/terraform-aws-modules/terraform-aws-vpc",
+      "conclusion": "neutral",
+      "overallScore": 17,
+      "findingCount": 3,
+      "ruleIds": [
+        "IAP-E001",
+        "IAP-G001",
+        "IAP-P003"
+      ],
+      "scanResult": {
+        "schemaVersion": "scan-result/v1",
+        "ruleCatalogVersion": "iaap-guard/v0.1.2",
+        "scoringModelVersion": "coverage/v1",
+        "repository": {
+          "name": "terraform-aws-modules/terraform-aws-vpc"
+        },
+        "revision": {
+          "sha": "0a36bd54069c64be2da788b2afb5df0a8e8e7398",
+          "ref": "0a36bd54069c64be2da788b2afb5df0a8e8e7398"
+        },
+        "detectedComponents": [
+          "control-plane-implementation",
+          "evidence",
+          "documentation-fixture",
+          "unknown"
+        ],
+        "findings": [
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "componentContext": "control-plane-implementation",
+            "path": "examples/block-public-access/main.tf",
+            "evidence": "infrastructure implementation is present without a recognizable consumer product contract",
+            "recommendation": "Introduce a stable product contract that expresses outcomes while hiding implementation topology.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "componentContext": "control-plane-implementation",
+            "path": "examples/block-public-access/main.tf",
+            "evidence": "no independently executable deterministic product-boundary validation was detected in analyzed scope",
+            "recommendation": "Add independently executable validation that proves the product boundary rather than relying on prose or CI presence alone.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "componentContext": "evidence",
+            "path": ".github/workflows/lock.yml",
+            "evidence": "no machine-observable status, reconciliation, teardown, or lifecycle evidence path was detected",
+            "recommendation": "Add a machine-observable lifecycle and evidence path appropriate to the product implementation.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          }
+        ],
+        "ruleResults": [
+          {
+            "ruleId": "IAP-P001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P002",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-X001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A002",
+            "result": "PASS",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-C001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P004",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-CX01",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Control-Plane Separation",
+            "scoring": false,
+            "experimental": true
+          }
+        ],
+        "dimensionScores": [
+          {
+            "dimension": "Product Abstraction",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          },
+          {
+            "dimension": "Consumer Boundary",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Experience / Authority",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Control-Plane Separation",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Governance",
+            "passed": 1,
+            "applicable": 2,
+            "score": 50
+          },
+          {
+            "dimension": "Evidence Readiness",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          }
+        ],
+        "overallScore": 17,
+        "conclusion": "neutral"
+      }
+    },
+    {
+      "repository": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "revision": "c8c984f60c61981b2cc4039471537de4995961b9",
+      "ecosystem": "azure",
+      "sourceUrl": "https://github.com/Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet",
+      "conclusion": "neutral",
+      "overallScore": 17,
+      "findingCount": 3,
+      "ruleIds": [
+        "IAP-E001",
+        "IAP-G001",
+        "IAP-P003"
+      ],
+      "scanResult": {
+        "schemaVersion": "scan-result/v1",
+        "ruleCatalogVersion": "iaap-guard/v0.1.2",
+        "scoringModelVersion": "coverage/v1",
+        "repository": {
+          "name": "Azure/terraform-azurerm-avm-ptn-alz-connectivity-hub-and-spoke-vnet"
+        },
+        "revision": {
+          "sha": "c8c984f60c61981b2cc4039471537de4995961b9",
+          "ref": "c8c984f60c61981b2cc4039471537de4995961b9"
+        },
+        "detectedComponents": [
+          "control-plane-implementation",
+          "evidence",
+          "documentation-fixture",
+          "unknown"
+        ],
+        "findings": [
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "componentContext": "control-plane-implementation",
+            "path": "avm.tflint.override.hcl",
+            "evidence": "infrastructure implementation is present without a recognizable consumer product contract",
+            "recommendation": "Introduce a stable product contract that expresses outcomes while hiding implementation topology.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "componentContext": "control-plane-implementation",
+            "path": "avm.tflint.override.hcl",
+            "evidence": "no independently executable deterministic product-boundary validation was detected in analyzed scope",
+            "recommendation": "Add independently executable validation that proves the product boundary rather than relying on prose or CI presence alone.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "componentContext": "evidence",
+            "path": ".github/workflows/codeql.yml",
+            "evidence": "no machine-observable status, reconciliation, teardown, or lifecycle evidence path was detected",
+            "recommendation": "Add a machine-observable lifecycle and evidence path appropriate to the product implementation.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          }
+        ],
+        "ruleResults": [
+          {
+            "ruleId": "IAP-P001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P002",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-X001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A002",
+            "result": "PASS",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-C001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P004",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-CX01",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Control-Plane Separation",
+            "scoring": false,
+            "experimental": true
+          }
+        ],
+        "dimensionScores": [
+          {
+            "dimension": "Product Abstraction",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          },
+          {
+            "dimension": "Consumer Boundary",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Experience / Authority",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Control-Plane Separation",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Governance",
+            "passed": 1,
+            "applicable": 2,
+            "score": 50
+          },
+          {
+            "dimension": "Evidence Readiness",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          }
+        ],
+        "overallScore": 17,
+        "conclusion": "neutral"
+      }
+    },
+    {
+      "repository": "terraform-google-modules/terraform-google-network",
+      "revision": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+      "ecosystem": "gcp",
+      "sourceUrl": "https://github.com/terraform-google-modules/terraform-google-network",
+      "conclusion": "neutral",
+      "overallScore": 17,
+      "findingCount": 3,
+      "ruleIds": [
+        "IAP-E001",
+        "IAP-G001",
+        "IAP-P003"
+      ],
+      "scanResult": {
+        "schemaVersion": "scan-result/v1",
+        "ruleCatalogVersion": "iaap-guard/v0.1.2",
+        "scoringModelVersion": "coverage/v1",
+        "repository": {
+          "name": "terraform-google-modules/terraform-google-network"
+        },
+        "revision": {
+          "sha": "66532db28ab7aabfb0d8d31cb0534788a78e3221",
+          "ref": "66532db28ab7aabfb0d8d31cb0534788a78e3221"
+        },
+        "detectedComponents": [
+          "control-plane-implementation",
+          "evidence",
+          "documentation-fixture",
+          "unknown"
+        ],
+        "findings": [
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "componentContext": "control-plane-implementation",
+            "path": "codelabs/simple/main.tf",
+            "evidence": "infrastructure implementation is present without a recognizable consumer product contract",
+            "recommendation": "Introduce a stable product contract that expresses outcomes while hiding implementation topology.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "componentContext": "control-plane-implementation",
+            "path": "codelabs/simple/main.tf",
+            "evidence": "no independently executable deterministic product-boundary validation was detected in analyzed scope",
+            "recommendation": "Add independently executable validation that proves the product boundary rather than relying on prose or CI presence alone.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "componentContext": "evidence",
+            "path": ".github/workflows/lint.yaml",
+            "evidence": "no machine-observable status, reconciliation, teardown, or lifecycle evidence path was detected",
+            "recommendation": "Add a machine-observable lifecycle and evidence path appropriate to the product implementation.",
+            "scoring": true,
+            "experimental": false,
+            "line": 1
+          }
+        ],
+        "ruleResults": [
+          {
+            "ruleId": "IAP-P001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P002",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-X001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Experience / Authority",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-A002",
+            "result": "PASS",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-C001",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Consumer Boundary",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P003",
+            "result": "WARNING",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-P004",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Product Abstraction",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-G001",
+            "result": "WARNING",
+            "dimension": "Governance",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-E001",
+            "result": "WARNING",
+            "dimension": "Evidence Readiness",
+            "scoring": true,
+            "experimental": false
+          },
+          {
+            "ruleId": "IAP-CX01",
+            "result": "NOT_APPLICABLE",
+            "dimension": "Control-Plane Separation",
+            "scoring": false,
+            "experimental": true
+          }
+        ],
+        "dimensionScores": [
+          {
+            "dimension": "Product Abstraction",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          },
+          {
+            "dimension": "Consumer Boundary",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Experience / Authority",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Control-Plane Separation",
+            "passed": 0,
+            "applicable": 0,
+            "score": null
+          },
+          {
+            "dimension": "Governance",
+            "passed": 1,
+            "applicable": 2,
+            "score": 50
+          },
+          {
+            "dimension": "Evidence Readiness",
+            "passed": 0,
+            "applicable": 1,
+            "score": 0
+          }
+        ],
+        "overallScore": 17,
+        "conclusion": "neutral"
+      }
+    }
+  ]
+}
