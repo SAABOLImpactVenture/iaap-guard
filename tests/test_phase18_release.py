@@ -24,9 +24,10 @@ class Phase18ReleaseTests(unittest.TestCase):
             self.assertTrue(text.strip(), relative)
 
         limits = (ROOT / "docs/KNOWN-LIMITS.md").read_text(encoding="utf-8")
-        self.assertIn("does not ingest organizational OKRs", limits)
-        self.assertIn("execute infrastructure", limits)
-        self.assertIn("mutate repositories", limits)
+        normalized_limits = " ".join(limits.split())
+        self.assertIn("does not ingest organizational OKRs", normalized_limits)
+        self.assertIn("execute infrastructure", normalized_limits)
+        self.assertIn("mutate repositories", normalized_limits)
 
     def test_completion_status_is_consistent(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
