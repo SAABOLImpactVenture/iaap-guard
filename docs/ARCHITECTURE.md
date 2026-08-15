@@ -296,10 +296,11 @@ Deterministic repository preflight, GitHub-aware product diagnostics, and adviso
 composition are implemented, merged, deployed, and live-accepted through the retained
 READY → BLOCKED → READY campaign.
 
-### Phase 16 — Public Beta Closure — IN PROGRESS
+### Phase 16 — Public Beta Closure — COMPLETE
 
-Reconcile release status, verify operational and security controls, document support and
-rollback procedures, and retain final beta-closure evidence without adding product scope.
+Release status, operational and security controls, adopter reproducibility, support and
+rollback procedures, V1 boundaries, and final protected validation are reconciled and
+retained without adding product scope.
 
 ### Phase 17 — External Adoption Validation — PLANNED
 
