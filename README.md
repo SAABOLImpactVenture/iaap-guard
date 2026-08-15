@@ -279,7 +279,7 @@ The GitHub App does not trust a PR—or one repository acting alone—to expand 
 
 V1 supports at most **12 registered repositories** per product. See [`docs/MULTI-REPOSITORY-PRODUCTS.md`](docs/MULTI-REPOSITORY-PRODUCTS.md) and the adoption prerequisite guide before enabling federation.
 
-## Public GitHub App beta
+## Public GitHub App V1
 
 The App remains a small stateless adapter around the deterministic core.
 
@@ -354,6 +354,10 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - `docs/DOGFOOD.md` — six-repository evidence plan.
 - `docs/GITHUB-ACTION.md` — Action adapter and authority boundary.
 - `docs/GITHUB-APP-BETA.md` — public GitHub App contract, deployment guide, continuity, federation, and beta limits.
+- `docs/SUPPORT.md` — supported release line, channels, scope, and maintenance policy.
+- `docs/UPGRADING.md` — compatible upgrade and rollback procedure.
+- `docs/KNOWN-LIMITS.md` — bounded V1 analysis, interpretation, and adapter limits.
+- `docs/PHASE-18-VALIDATION.md` — final V1 acceptance and completion declaration.
 - `docs/PHASE-17-VALIDATION.md` — independent external-adoption campaign and adjudication.
 - `docs/V1-CONTRACT-FREEZE.md` — frozen V1 compatibility and authority contracts.
 - `schemas/scan-result.schema.json` — normalized repository result contract.
@@ -378,6 +382,6 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - **PHASE 15 — Adoption Readiness / Preflight: COMPLETE**
 - **PHASE 16 — Public Beta Closure: COMPLETE**
 - **PHASE 17 — External Adoption Validation: COMPLETE**
-- **PHASE 18 — V1 Product Completion: PLANNED**
+- **PHASE 18 — V1 Product Completion: COMPLETE**
 
-Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phase 16 is closed by retained operational, security, clean-adopter, boundary-consistency, and protected-validation evidence. Phase 17 is closed by a read-only three-cloud external campaign, complete finding adjudication, and the V1 contract freeze. Phase 18 publishes the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
+Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phase 16 is closed by retained operational, security, clean-adopter, boundary-consistency, and protected-validation evidence. Phase 17 is closed by a read-only three-cloud external campaign, complete finding adjudication, and the V1 contract freeze. Phase 18 publishes version 1.0.0 with support, upgrade, known-limit, and final acceptance policies. IaaP Guard product development is complete; future work is compatible maintenance or an explicitly versioned successor, without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
