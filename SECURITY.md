@@ -37,7 +37,12 @@ Security-sensitive components include:
 IaaP Guard intentionally does not require customer cloud credentials,
 repository content-write permission, workflow administration permission,
 merge authority, provisioning authority, remediation authority, or
-deployment authority.
+deployment authority. It does not ingest organizational OKRs, manage delivery
+work, or make security, compliance, exception, or risk-acceptance decisions.
+
+These security-specific statements inherit the canonical
+[V1 explicit exclusions](docs/PRODUCT.md#explicit-exclusions) and do not expand
+the product boundary.
 
 ## Disclosure
 
