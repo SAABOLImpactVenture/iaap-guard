@@ -354,6 +354,8 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - `docs/DOGFOOD.md` — six-repository evidence plan.
 - `docs/GITHUB-ACTION.md` — Action adapter and authority boundary.
 - `docs/GITHUB-APP-BETA.md` — public GitHub App contract, deployment guide, continuity, federation, and beta limits.
+- `docs/PHASE-17-VALIDATION.md` — independent external-adoption campaign and adjudication.
+- `docs/V1-CONTRACT-FREEZE.md` — frozen V1 compatibility and authority contracts.
 - `schemas/scan-result.schema.json` — normalized repository result contract.
 - `schemas/evidence-manifest.schema.json` — normalized evidence and continuity contract.
 - `schemas/planning-report.schema.json` — normalized repository improvement-plan contract.
@@ -375,7 +377,7 @@ See [`docs/GITHUB-APP-BETA.md`](docs/GITHUB-APP-BETA.md).
 - **PHASE 14 — PR-base Evidence Continuity: COMPLETE**
 - **PHASE 15 — Adoption Readiness / Preflight: COMPLETE**
 - **PHASE 16 — Public Beta Closure: COMPLETE**
-- **PHASE 17 — External Adoption Validation: IN PROGRESS**
+- **PHASE 17 — External Adoption Validation: COMPLETE**
 - **PHASE 18 — V1 Product Completion: PLANNED**
 
-Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phase 16 is closed by retained operational, security, clean-adopter, boundary-consistency, and protected-validation evidence. Phases 17–18 validate independent adoption and publish the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
+Phase 12 is closed by real reciprocal two-repository federation, a live cross-repository incompatibility finding, evidence-backed product planning, targeted remediation, and SUCCESS 100 revalidation. Phase 14 is closed by deployed-App evidence showing `SUPPORTED` followed by `REVIEW REQUIRED` on the same fresh pull request after a controlled Guard-material change. Phase 15 is closed by deployed READY → BLOCKED → READY acceptance with retained evidence. Phase 16 is closed by retained operational, security, clean-adopter, boundary-consistency, and protected-validation evidence. Phase 17 is closed by a read-only three-cloud external campaign, complete finding adjudication, and the V1 contract freeze. Phase 18 publishes the bounded V1 product without expanding Guard into work management, infrastructure execution, enterprise strategy, or automated remediation.
