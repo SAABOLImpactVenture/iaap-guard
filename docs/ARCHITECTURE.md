@@ -309,10 +309,11 @@ Terraform modules at immutable revisions. All findings were adjudicated, no mate
 rule-quality defect was found, and the V1 rule, schema, scoring, planning, and authority
 contracts were frozen.
 
-### Phase 18 — V1 Product Completion — PLANNED
+### Phase 18 — V1 Product Completion — COMPLETE
 
-Publish the bounded V1 release, support and upgrade policies, known limits, final
-acceptance evidence, and an explicit completion declaration.
+Version 1.0.0 publishes the frozen V1 contracts with support, upgrade, known-limit, and
+final acceptance policies. Product development is complete; future work is compatible
+maintenance or an explicitly versioned successor.
 
 ## Canonical V1 boundary
 
