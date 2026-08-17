@@ -18,6 +18,24 @@ Its three product questions are:
 
 IaaP Guard does **not** decide whether an action is legally, institutionally, operationally, security, compliance, exception, risk-acceptance, or deployment-authorized. Evidence continuity is not authorization continuity.
 
+## The product model Guard protects
+
+Application developers consume standard infrastructure products through a storefront such as Backstage; they should not need to assemble raw cloud resources. Guard evaluates whether the repositories and evidence behind that experience still describe a coherent infrastructure product.
+
+<p align="center">
+  <img src="docs/assets/showcase/iaap-drive-thru-product-model.webp" alt="IaaP Guard drive-through product model: developers order standard infrastructure outcomes while Guard evaluates product, evidence, and continuity behind the storefront" width="1100"/>
+</p>
+
+<p align="center"><em>Developers order the outcome—not the ingredients.</em></p>
+
+Useful product evidence centers the developer experience: provisioning speed, product health, diagnosis and restoration time, adoption, exception rate, and Developer NPS. Guard can preserve and assess relevant architecture and continuity evidence, but it does not invent outcome measurements, authorize changes, or execute remediation.
+
+<p align="center">
+  <img src="docs/assets/showcase/iaap-developer-outcomes.webp" alt="IaaP Guard outcome model contrasting engineering activity with provisioning speed, health, diagnosis, restoration, adoption, and developer experience" width="1100"/>
+</p>
+
+<p align="center"><em>Measure the developer experience—not the activity behind it.</em></p>
+
 ## Live-proven capabilities
 
 Two previously experimental capabilities are now live-accepted.
