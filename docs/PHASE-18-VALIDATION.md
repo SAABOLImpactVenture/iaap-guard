@@ -27,9 +27,10 @@ The V1 declaration rests on retained evidence:
 - Phase 17 immutable three-cloud external-adoption evidence and finding adjudication.
 
 The compatibility and authority surface is frozen in
-[`V1-CONTRACT-FREEZE.md`](V1-CONTRACT-FREEZE.md). Support, upgrades, and known limits
-are published in [`SUPPORT.md`](SUPPORT.md), [`UPGRADING.md`](UPGRADING.md), and
-[`KNOWN-LIMITS.md`](KNOWN-LIMITS.md).
+[`V1-CONTRACT-FREEZE.md`](V1-CONTRACT-FREEZE.md). Current support and known limits
+are published in [`SUPPORT.md`](SUPPORT.md) and
+[`KNOWN-LIMITS.md`](KNOWN-LIMITS.md). The public composite Action is retired; use the
+[hosted GitHub App](https://github.com/apps/iaap-guard).
 
 ## Release mechanics
 

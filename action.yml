@@ -1,51 +1,28 @@
-name: IaaP Guard
+name: IaaP Guard (retired Action)
 
-description: "Deterministic Infrastructure-as-a-Product architecture and evidence guard"
+description: "Retired composite Action; install the hosted IaaP Guard GitHub App"
 
 author: "SAABOL Impact Venture"
 
 inputs:
   target:
-    description: "Repository-relative path to scan"
+    description: "Retained only for compatibility with existing workflow syntax"
     required: false
     default: "."
   output:
-    description: "Repository-relative JSON result path"
+    description: "Retained only for compatibility with existing workflow syntax"
     required: false
     default: "artifacts/iaap-guard/scan-result.json"
   fail-on-failure:
-    description: "Fail the workflow step when IaaP Guard concludes failure"
+    description: "Retained only for compatibility with existing workflow syntax"
     required: false
     default: "false"
-
-outputs:
-  conclusion:
-    description: "IaaP Guard conclusion: success, neutral, or failure"
-    value: ${{ steps.scan.outputs.conclusion }}
-  score:
-    description: "Overall coverage score, or empty when no scoring controls apply"
-    value: ${{ steps.scan.outputs.score }}
-  result-path:
-    description: "Repository-relative path of the normalized scan-result/v1 JSON"
-    value: ${{ steps.scan.outputs.result-path }}
-  findings:
-    description: "Number of WARNING/FAIL findings"
-    value: ${{ steps.scan.outputs.findings }}
 
 runs:
   using: "composite"
   steps:
-    - name: Install bounded runtime dependency
+    - name: Explain IaaP Guard Action retirement
       shell: bash
-      run: python -m pip install --disable-pip-version-check --quiet PyYAML==6.0.2
-
-    - name: Run IaaP Guard
-      id: scan
-      shell: bash
-      env:
-        IAAP_GUARD_TARGET: ${{ inputs.target }}
-        IAAP_GUARD_OUTPUT: ${{ inputs.output }}
-        IAAP_GUARD_FAIL_ON_FAILURE: ${{ inputs.fail-on-failure }}
       run: |
-        export PYTHONPATH="${GITHUB_ACTION_PATH}/src${PYTHONPATH:+:${PYTHONPATH}}"
-        python "${GITHUB_ACTION_PATH}/scripts/github_action.py"
+        echo "::error title=IaaP Guard Action retired::The public composite Action is retired. Install the supported hosted GitHub App at https://github.com/apps/iaap-guard and remove uses: SAABOLImpactVenture/iaap-guard@main from this workflow. Historical pinned revisions remain available but are unsupported."
+        exit 1

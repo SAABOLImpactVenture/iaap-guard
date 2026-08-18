@@ -11,61 +11,16 @@ jobs:
   scan-program-hub:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout IaaP Guard
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: '3.12'
-
-      - name: Install Guard runtime dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
-
-      - name: Checkout pinned public program hub
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: SAABOLImpactVenture/ai-powered-infrastructure-as-a-product
-          ref: 24c47b959cb47088d668acc4fe637f116561f7f9
-          path: targets/program-hub
-          persist-credentials: false
-
-      - name: Scan public program hub with merged v0.1.2 core
-        id: scan
+      - name: Validate retained public assurance surface
         shell: bash
         run: |
-          set +e
-          PYTHONPATH=src python -m iaap_guard.cli scan targets/program-hub \
-            --repository SAABOLImpactVenture/ai-powered-infrastructure-as-a-product \
-            --revision 24c47b959cb47088d668acc4fe637f116561f7f9 \
-            --ref refs/heads/main \
-            --format json \
-            --output artifacts/phase-9/program-hub.json
-          scan_exit=$?
-          set -e
-          echo "scan-exit=${scan_exit}" >> "$GITHUB_OUTPUT"
-          test -s artifacts/phase-9/program-hub.json
-
-      - name: Verify evidence identity
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          result = json.loads(Path('artifacts/phase-9/program-hub.json').read_text(encoding='utf-8'))
-          assert result['schemaVersion'] == 'scan-result/v1'
-          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.2'
-          assert result['scoringModelVersion'] == 'coverage/v1'
-          assert result['repository']['name'] == 'SAABOLImpactVenture/ai-powered-infrastructure-as-a-product'
-          assert result['revision']['sha'] == '24c47b959cb47088d668acc4fe637f116561f7f9'
-          print(f"program hub: conclusion={result['conclusion']} score={result['overallScore']} findings={len(result['findings'])}")
-          PY
-
-      - name: Upload program-hub evidence
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with:
-          name: iaap-guard-program-hub
-          path: artifacts/phase-9/program-hub.json
-          if-no-files-found: error
+          set -euo pipefail
+          test -s artifacts/phase-9/index.json
+          test -s artifacts/phase-14/acceptance.json
+          test -s config/github-app-v0.json
+          test -s docs/ADOPTION-PREREQUISITES.md
+          test -s docs/PRODUCT.md
+          python3 -m json.tool config/github-app-v0.json >/dev/null
