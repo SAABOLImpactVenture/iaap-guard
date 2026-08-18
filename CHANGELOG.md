@@ -4,7 +4,7 @@
 
 - moved the supported GitHub App runtime to the protected private core;
 - retained successful identity, plan, deployment, health, Check Run parity, alarm, and rollback evidence;
-- retired the public composite Action with an explicit migration failure;
+- retired the public composite Action and removed its root manifest to prevent Marketplace classification;
 - reduced the current public branch to product documentation, contracts, schemas, evidence, security, and support material; and
 - preserved Git history and the existing public license without modification.
 
