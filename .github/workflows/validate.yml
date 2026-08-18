@@ -26,14 +26,11 @@ jobs:
           for path in sorted(Path("schemas").glob("*.json")):
               json.loads(path.read_text(encoding="utf-8"))
 
-          forbidden = ["src", "rules", "tests", "fixtures", "deploy", "scripts", "lambda_function.py"]
+          forbidden = ["src", "rules", "tests", "fixtures", "deploy", "scripts", "lambda_function.py", "action.yml"]
           present = [path for path in forbidden if Path(path).exists()]
           if present:
               raise SystemExit(f"private implementation paths are present: {present}")
 
-          action = Path("action.yml").read_text(encoding="utf-8")
-          assert "Action retired" in action
-          assert "https://github.com/apps/iaap-guard" in action
           print("public contracts and distribution boundary verified")
           PY
 
@@ -50,5 +47,5 @@ jobs:
           set -euo pipefail
           grep -Fq "Composite Action retired" README.md
           grep -Fq "https://github.com/apps/iaap-guard" README.md
-          grep -Fq "exit 1" action.yml
-          ! grep -Rq "PYTHONPATH=.*src\|scripts/github_action.py" action.yml README.md
+          test ! -e action.yml
+          ! grep -Rq "PYTHONPATH=.*src\|scripts/github_action.py" README.md

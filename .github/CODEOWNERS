@@ -1,7 +1,6 @@
 * @GEP-V
 
 .github/workflows/ @GEP-V
-action.yml @GEP-V
 config/ @GEP-V
 schemas/ @GEP-V
 artifacts/ @GEP-V

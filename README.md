@@ -24,7 +24,7 @@ Read [adoption prerequisites](docs/ADOPTION-PREREQUISITES.md), [known limits](do
 
 The former public composite Action is retired. New and current integrations should use the hosted GitHub App.
 
-Historical commits and immutable tags remain available for users already pinned to them, but they are not the supported delivery path and do not receive current product or security updates. Workflows using `SAABOLImpactVenture/iaap-guard@main` now fail with a direct migration message rather than silently running an unsupported implementation.
+Historical commits and immutable tags remain available for users already pinned to them, but they are not the supported delivery path and do not receive current product or security updates. The current `main` branch no longer contains an Action manifest, so workflows must migrate to the hosted App instead of using `SAABOLImpactVenture/iaap-guard@main`.
 
 ## Public repository scope
 
@@ -35,7 +35,7 @@ This repository is the public product, adoption, interface, and assurance surfac
 - architecture and authority boundaries;
 - synthetic and historical validation evidence;
 - security and support policies; and
-- the explicit Action-retirement shim.
+- explicit Action-retirement and hosted-App migration guidance.
 
 The hosted evaluation engine, rule implementation, GitHub App runtime, AWS deployment assets, internal fixtures, and regression tests are maintained privately.
 
