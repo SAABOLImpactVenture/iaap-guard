@@ -15,14 +15,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements-ci.txt
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements-ci.txt
-      - run: make validate
+      - name: Validate public contracts and distribution boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          for path in sorted(Path("schemas").glob("*.json")):
+              json.loads(path.read_text(encoding="utf-8"))
+
+          forbidden = ["src", "rules", "tests", "fixtures", "deploy", "scripts", "lambda_function.py"]
+          present = [path for path in forbidden if Path(path).exists()]
+          if present:
+              raise SystemExit(f"private implementation paths are present: {present}")
+
+          action = Path("action.yml").read_text(encoding="utf-8")
+          assert "Action retired" in action
+          assert "https://github.com/apps/iaap-guard" in action
+          print("public contracts and distribution boundary verified")
+          PY
 
   dogfood-action:
     needs: validate-core
@@ -31,40 +44,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: '3.12'
-      - name: Run IaaP Guard against itself
-        id: guard
-        uses: ./
-        with:
-          fail-on-failure: 'false'
-          output: artifacts/iaap-guard/self-scan.json
-      - name: Verify action evidence contract
-        env:
-          RESULT_PATH: ${{ steps.guard.outputs.result-path }}
-          GUARD_CONCLUSION: ${{ steps.guard.outputs.conclusion }}
+      - name: Verify explicit migration guidance
+        shell: bash
         run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          result = json.loads(Path(os.environ['RESULT_PATH']).read_text(encoding='utf-8'))
-          assert result['schemaVersion'] == 'scan-result/v1'
-          assert result['ruleCatalogVersion'] == 'iaap-guard/v0.1.2'
-          assert result['scoringModelVersion'] == 'coverage/v1'
-          assert result['repository']['name'] == os.environ['GITHUB_REPOSITORY']
-          assert result['revision']['sha'] == os.environ['GITHUB_SHA']
-          assert result['conclusion'] == os.environ['GUARD_CONCLUSION']
-          assert not any(f['path'].startswith('fixtures/') and f['result'] == 'FAIL' for f in result['findings'])
-          e001 = next(item for item in result['ruleResults'] if item['ruleId'] == 'IAP-E001')
-          assert e001['result'] == 'NOT_APPLICABLE'
-          assert not any(f['ruleId'] == 'IAP-E001' for f in result['findings'])
-          print(f"verified self-scan: conclusion={result['conclusion']} score={result['overallScore']} findings={len(result['findings'])}")
-          PY
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: iaap-guard-self-scan
-          path: artifacts/iaap-guard/self-scan.json
-          if-no-files-found: error
+          set -euo pipefail
+          grep -Fq "Composite Action retired" README.md
+          grep -Fq "https://github.com/apps/iaap-guard" README.md
+          grep -Fq "exit 1" action.yml
+          ! grep -Rq "PYTHONPATH=.*src\|scripts/github_action.py" action.yml README.md

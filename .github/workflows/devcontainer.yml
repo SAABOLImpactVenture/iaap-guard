@@ -2,26 +2,8 @@ name: Dev container portability
 
 on:
   pull_request:
-    paths:
-      - '.devcontainer/**'
-      - '.github/workflows/devcontainer.yml'
-      - '.gitignore'
-      - 'requirements-*.txt'
-      - 'Makefile'
-      - 'src/**'
-      - 'tests/**'
-      - 'scripts/**'
   push:
     branches: [main]
-    paths:
-      - '.devcontainer/**'
-      - '.github/workflows/devcontainer.yml'
-      - '.gitignore'
-      - 'requirements-*.txt'
-      - 'Makefile'
-      - 'src/**'
-      - 'tests/**'
-      - 'scripts/**'
 
 permissions:
   contents: read
@@ -31,8 +13,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Build dev container and validate toolchain
-        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3
         with:
-          push: never
-          runCmd: bash .devcontainer/verify-toolchain.sh
+          persist-credentials: false
+      - name: Verify repository is documentation-first and toolchain-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .devcontainer
+          test ! -e requirements.txt
+          test ! -e requirements-ci.txt
+          test ! -e Makefile
+          test ! -e src
+          test ! -e tests

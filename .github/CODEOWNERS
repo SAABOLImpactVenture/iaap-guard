@@ -1,8 +1,7 @@
 * @GEP-V
 
 .github/workflows/ @GEP-V
-deploy/ @GEP-V
-src/iaap_guard/ @GEP-V
 action.yml @GEP-V
-requirements-app.txt @GEP-V
-requirements-ci.txt @GEP-V
+config/ @GEP-V
+schemas/ @GEP-V
+artifacts/ @GEP-V
