@@ -39,7 +39,7 @@ This repository is the public product, adoption, interface, and assurance surfac
 
 The hosted evaluation engine, rule implementation, GitHub App runtime, AWS deployment assets, internal fixtures, and regression tests are maintained privately.
 
-No Git history was rewritten during this transition. Previously published commits remain part of repository history.
+No Git history was rewritten during this transition. Previously published commits remain part of repository history. Current and future publication follows the [Public Publication Boundary](docs/PUBLICATION-BOUNDARY.md), which favors sanitized assurance evidence over private implementation or raw operational detail.
 
 ## Product model
 
