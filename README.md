@@ -20,6 +20,8 @@ The App requires only repository metadata read, contents read, pull-request read
 
 Read [adoption prerequisites](docs/ADOPTION-PREREQUISITES.md), [known limits](docs/KNOWN-LIMITS.md), and [support guidance](docs/SUPPORT.md) before the first live evaluation.
 
+For the minimum trusted cloud-foundation starting point, readiness gates, responsibilities, and Composite AI's bounded advisory role, use the [authoritative IaaP Bootstrap and Foundation Readiness package](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/tree/main/docs/bootstrap-foundation-readiness). It is upstream guidance and does not add foundation-readiness rules, cloud access, provisioning, approval, or risk-acceptance authority to Guard V1.
+
 ## Composite Action retired
 
 The former public composite Action is retired. New and current integrations should use the hosted GitHub App.
