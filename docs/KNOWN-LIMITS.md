@@ -37,6 +37,12 @@ deployment. It requires supported pull-request events, a valid webhook signature
 access to required repositories, and inputs within archive limits. Hosting availability
 is not part of the deterministic contract.
 
+GitHub Enterprise Server, enterprise-specific policy combinations, restricted network
+paths, nonstandard repository content models, and deployment-specific scale are not
+universally qualified. Their expected behavior and required adoption evidence are defined
+in [Environment compatibility Q&A](ENVIRONMENT-COMPATIBILITY-QA.md) and
+[Production readiness and operations Q&A](PRODUCTION-READINESS-QA.md).
+
 ## Explicit exclusions
 
 The complete authoritative exclusion list is
