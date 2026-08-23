@@ -12,6 +12,12 @@ Before requesting help, confirm:
 - repository and archive sizes remain within [known limits](KNOWN-LIMITS.md); and
 - multi-repository membership is reciprocal and accessible when product context is expected.
 
+For environment-specific failures, record the condition, expected Guard behavior,
+operator action, immutable evidence, and production-gate decision using
+[Environment compatibility Q&A](ENVIRONMENT-COMPATIBILITY-QA.md). Availability,
+capacity, upgrades, recovery, monitoring, and operational ownership must be qualified
+through [Production readiness and operations Q&A](PRODUCTION-READINESS-QA.md).
+
 ## Security reports
 
 Use GitHub Private Vulnerability Reporting for suspected vulnerabilities. Never post credentials, tokens, webhook payloads, private repository content, or exploit details in a public issue.
