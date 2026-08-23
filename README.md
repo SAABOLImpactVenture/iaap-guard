@@ -18,7 +18,7 @@ For supported pull-request events, the App publishes the `IaaP Guard / Architect
 
 The App requires only repository metadata read, contents read, pull-request read, and checks read/write permissions. It does not request repository content-write, merge, workflow-administration, customer-cloud, provisioning, remediation, exception, or risk-acceptance authority.
 
-Read [adoption prerequisites](docs/ADOPTION-PREREQUISITES.md), [known limits](docs/KNOWN-LIMITS.md), and [support guidance](docs/SUPPORT.md) before the first live evaluation.
+Read [adoption prerequisites](docs/ADOPTION-PREREQUISITES.md), [known limits](docs/KNOWN-LIMITS.md), [environment compatibility Q&A](docs/ENVIRONMENT-COMPATIBILITY-QA.md), [production readiness and operations Q&A](docs/PRODUCTION-READINESS-QA.md), and [support guidance](docs/SUPPORT.md) before the first live evaluation or production-qualification decision.
 
 For the minimum trusted cloud-foundation starting point, readiness gates, responsibilities, and Composite AI's bounded advisory role, use the [authoritative IaaP Bootstrap and Foundation Readiness package](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/tree/main/docs/bootstrap-foundation-readiness). It is upstream guidance and does not add foundation-readiness rules, cloud access, provisioning, approval, or risk-acceptance authority to Guard V1.
 
