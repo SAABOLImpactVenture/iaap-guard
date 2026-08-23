@@ -20,8 +20,11 @@ claim that every possible combination has been tested.
 
 ### Does Guard work with every GitHub plan and deployment model?
 
-No universal claim is made. The hosted V1 path is qualified for GitHub.com repositories
-that can install the IaaP Guard GitHub App and deliver supported pull-request events.
+No universal claim is made. The hosted V1 path is qualified only for the validated
+GitHub.com operating path: same-repository pull requests without merge queues or custom
+required-check behavior, where the repository can install the IaaP Guard GitHub App,
+deliver supported pull-request events, expose immutable snapshots, and accept Check
+publication. Fork-origin pull requests, merge queues, custom required-check rules,
 GitHub Enterprise Server, enterprise-managed restrictions, and configurations that alter
 App installation, webhook delivery, Checks publication, or repository archive access are
 `UNVALIDATED` until exercised through the production-qualification process.
@@ -97,9 +100,9 @@ being interpreted as a passing architecture decision.
 ### What happens with invalid YAML, JSON, manifests, or unsupported rule versions?
 
 Malformed required evidence, schema-invalid registration, conflicting membership, mixed
-rule versions, or unresolvable immutable revisions must produce a normalized finding,
-`INCOMPLETE`, or fail-closed result according to the applicable V1 schema. Guard must not
-guess intent or relax validation to obtain a passing result.
+rule versions, or unresolvable immutable revisions must produce a normalized finding or
+`INCOMPLETE`; otherwise Guard must fail closed without producing a trusted result. Guard
+must not guess intent or relax validation to obtain a passing result.
 
 ### What happens with unsupported, binary, oversized, compressed, or unusually large
 content?
