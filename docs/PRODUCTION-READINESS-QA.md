@@ -79,9 +79,10 @@ an explicitly versioned successor and migration guidance.
 ### What is the safe upgrade sequence?
 
 The release owner must validate schemas, rules, deterministic core compatibility,
-adapter/runtime behavior, and Console consumption before promotion. A release record must
-identify immutable versions, test evidence, change risk, rollback target, and the person
-approving promotion. Production promotion must never rely only on a mutable branch name.
+adapter/runtime behavior, and consumption of the published GitHub Check contract before
+promotion. A release record must identify immutable versions, test evidence, change risk,
+rollback target, and the person approving promotion. Production promotion must never
+rely only on a mutable branch name.
 
 ### What is required for rollback?
 
@@ -101,11 +102,14 @@ results. Manual fabrication of a passing Check is not an accepted recovery metho
 
 ### What must be backed up?
 
-The V1 GitHub App evaluation path is designed as stateless, while GitHub retains the Check
-and repository evidence. Operators must nevertheless inventory every deployment-specific
-persistent component, including configuration, secrets metadata, release manifests,
-monitoring, incident records, and any queues or dead-letter stores. Each item needs an
-explicit retain, back up, reconstruct, or exclude decision.
+The V1 GitHub App evaluation path is designed as stateless, while GitHub ordinarily
+retains the Check and repository evidence. Operators must not assume that evidence remains
+available after repository deletion, transfer, retention expiry, or loss of App access.
+They must inventory Guard results, evaluated source evidence or immutable references, and
+every deployment-specific persistent component, including configuration, secrets
+metadata, release manifests, monitoring, incident records, and any queues or dead-letter
+stores. Each evidence class and component needs an explicit retain, export, back up,
+reconstruct, or exclude decision with an accountable owner and retention period.
 
 ### What disaster-recovery evidence is required?
 
