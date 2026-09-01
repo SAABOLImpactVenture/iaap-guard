@@ -444,18 +444,22 @@ jobs:
                       break
               return False
 
+          def decode_to_fixed_point(value: str) -> str:
+              while True:
+                  decoded_value = unquote(value)
+                  if decoded_value == value:
+                      return value
+                  value = decoded_value
+
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
               normalized_text = text.replace("\\", "/")
-              repository_texts = [normalized_text]
-              for coordinate_match in github_coordinate_pattern.finditer(normalized_text):
-                  decoded_coordinate = coordinate_match.group(0)
-                  while True:
-                      next_decoded_coordinate = unquote(decoded_coordinate)
-                      if next_decoded_coordinate == decoded_coordinate:
-                          break
-                      decoded_coordinate = next_decoded_coordinate
-                  decoded_coordinate = decoded_coordinate.replace("\\", "/")
+              decoded_text = decode_to_fixed_point(normalized_text).replace("\\", "/")
+              repository_texts = [normalized_text, decoded_text]
+              for coordinate_match in github_coordinate_pattern.finditer(decoded_text):
+                  decoded_coordinate = decode_to_fixed_point(
+                      coordinate_match.group(0)
+                  ).replace("\\", "/")
                   repository_texts.append(decoded_coordinate)
                   repository_path = github_coordinate_prefix.sub(
                       "", decoded_coordinate, count=1
@@ -527,6 +531,7 @@ jobs:
               github_root + "%70rivate-producer",
               github_root + "%2570rivate-producer",
               github_root + "%25252570rivate-producer",
+              "https://github%2ecom/SAABOLImpactVenture/%70rivate-producer",
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
