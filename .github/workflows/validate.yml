@@ -166,60 +166,86 @@ jobs:
           }
           if observed_claim_states != required_claim_states:
               raise SystemExit(f"assurance claim states changed: {observed_claim_states}")
-          if claims["alarmStatus"]["alertDeliveryExercised"]:
-              raise SystemExit("alarm delivery must not be claimed as exercised")
-          if claims["rollback"]["rollbackExecuted"]:
-              raise SystemExit("rollback must not be claimed as executed")
-          if claims["adopterValidation"]["independentAdoptionEstablished"]:
-              raise SystemExit("same-organization validation must not claim adoption")
-          required_production_qualification = {
-              "status": "NOT_ESTABLISHED",
-              "slaPublished": False,
-              "controlledPilotAuthorized": False,
-              "productionReadinessClaimed": False,
-          }
-          required_authority = {
-              "repositoryWriteAuthorityAdded": False,
-              "infrastructureAuthorityAdded": False,
-              "authorizationAuthorityAdded": False,
-              "pilotAuthorized": False,
+
+          required_boolean_values = {
+              "publicationBoundary.customerDataPublished": False,
+              "publicationBoundary.privateRepositoryContentPublished": False,
+              "publicationBoundary.credentialsOrSecretsPublished": False,
+              "publicationBoundary.privateProducerRevisionPublished": False,
+              "publicationBoundary.workflowOrJobIdentifiersPublished": False,
+              "publicationBoundary.cloudResourceCoordinatesPublished": False,
+              "publicationBoundary.rawOperationalLogsPublished": False,
+              "claims.deploymentLogRetention.rawLogsPublished": False,
+              "claims.deploymentLogRetention.customerLoggingGuarantee": False,
+              "claims.hostedApplicationLogging.requestLogCompletenessValidated": False,
+              "claims.hostedApplicationLogging.redactionValidated": False,
+              "claims.hostedApplicationLogging.retentionValidated": False,
+              "claims.hostedApplicationLogging.incidentUseExercised": False,
+              "claims.alarmStatus.alertDeliveryExercised": False,
+              "claims.alarmStatus.alertResponseExercised": False,
+              "claims.concurrencyAndEndurance.representativeLoadTest": False,
+              "claims.concurrencyAndEndurance.throttlingRecoveryTest": False,
+              "claims.concurrencyAndEndurance.enduranceTest": False,
+              "claims.rollback.knownGoodTargetRetained": True,
+              "claims.rollback.procedureRetained": True,
+              "claims.rollback.rollbackExecuted": False,
+              "claims.rollback.rollbackCompletionEstablished": False,
+              "claims.adopterValidation.sameOrganization": True,
+              "claims.adopterValidation.independentAdoptionEstablished": False,
+              "claims.adopterValidation.customerValueEstablished": False,
+              "claims.adopterValidation.productionUseEstablished": False,
+              "claims.productionQualification.slaPublished": False,
+              "claims.productionQualification.controlledPilotAuthorized": False,
+              "claims.productionQualification.productionReadinessClaimed": False,
+              "authority.repositoryWriteAuthorityAdded": False,
+              "authority.infrastructureAuthorityAdded": False,
+              "authority.authorizationAuthorityAdded": False,
+              "authority.pilotAuthorized": False,
           }
 
-          def authority_boundary_errors(record: dict) -> list[str]:
-              errors = []
-              if (
-                  record["claims"]["productionQualification"]
-                  != required_production_qualification
-              ):
-                  errors.append("production qualification")
-              if record["authority"] != required_authority:
-                  errors.append("authority")
-              return errors
+          def collect_boolean_values(
+              value: object, prefix: tuple[str, ...] = ()
+          ) -> dict[str, bool]:
+              if isinstance(value, bool):
+                  return {".".join(prefix): value}
+              if isinstance(value, dict):
+                  observed = {}
+                  for key, child in value.items():
+                      observed.update(collect_boolean_values(child, (*prefix, key)))
+                  return observed
+              if isinstance(value, list):
+                  observed = {}
+                  for index, child in enumerate(value):
+                      observed.update(
+                          collect_boolean_values(child, (*prefix, str(index)))
+                      )
+                  return observed
+              return {}
 
-          authority_errors = authority_boundary_errors(assurance)
-          if authority_errors:
-              raise SystemExit(
-                  f"public Guard authority boundary changed: {authority_errors}"
+          def boolean_contract_errors(record: dict) -> list[str]:
+              observed = collect_boolean_values(record)
+              return sorted(
+                  path
+                  for path in set(observed) | set(required_boolean_values)
+                  if observed.get(path) != required_boolean_values.get(path)
               )
 
-          authority_mutations = [
-              ("claims", "productionQualification", "slaPublished"),
-              ("claims", "productionQualification", "controlledPilotAuthorized"),
-              ("claims", "productionQualification", "productionReadinessClaimed"),
-              ("authority", "repositoryWriteAuthorityAdded"),
-              ("authority", "infrastructureAuthorityAdded"),
-              ("authority", "authorizationAuthorityAdded"),
-              ("authority", "pilotAuthorized"),
-          ]
-          for mutation_path in authority_mutations:
+          boolean_errors = boolean_contract_errors(assurance)
+          if boolean_errors:
+              raise SystemExit(
+                  f"public Guard boolean assurance contract changed: {boolean_errors}"
+              )
+
+          for mutation_path, expected_value in required_boolean_values.items():
               mutated_assurance = json.loads(json.dumps(assurance))
               target = mutated_assurance
-              for key in mutation_path[:-1]:
+              keys = mutation_path.split(".")
+              for key in keys[:-1]:
                   target = target[key]
-              target[mutation_path[-1]] = True
-              if not authority_boundary_errors(mutated_assurance):
+              target[keys[-1]] = not expected_value
+              if not boolean_contract_errors(mutated_assurance):
                   raise SystemExit(
-                      f"authority mutation was not rejected: {mutation_path}"
+                      f"boolean assurance mutation was not rejected: {mutation_path}"
                   )
 
           log_digests = claims["deploymentLogRetention"]["logSha256"]
@@ -250,7 +276,7 @@ jobs:
               r"(?:https?://(?:api\.)?github\.com/(?:repos/)?|"
               r"git@github\.com:|ssh://git@github\.com/)?"
               r"SAABOLImpactVenture/iaap-guard-core"
-              r"(?:\.git)?(?:[/?#]|$)",
+              r"(?:\.git)?(?=$|[^A-Za-z0-9._-])",
               r"\b070096877875\b",
           ]
 
@@ -295,6 +321,9 @@ jobs:
               "https://github.com/SAABOLImpactVenture/iaap-guard-core.git",
               "git@github.com:SAABOLImpactVenture/iaap-guard-core.git",
               "ssh://git@github.com/SAABOLImpactVenture/iaap-guard-core.git",
+              "[producer](https://github.com/SAABOLImpactVenture/iaap-guard-core)",
+              "`git@github.com:SAABOLImpactVenture/iaap-guard-core.git`",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core,",
           ]
           for mutation in private_link_mutations:
               if not private_coordinate_matches(mutation):
