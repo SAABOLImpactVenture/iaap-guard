@@ -33,6 +33,18 @@ content, credentials, or internal topology. The machine-readable record is
 | Phase 17 unfamiliar-code campaign and V1 freeze | [`external-adoption.json`](../artifacts/phase-17/external-adoption.json), [`adjudication.json`](../artifacts/phase-17/adjudication.json), and [Phase 17 validation](PHASE-17-VALIDATION.md) | Read-only unfamiliar-code evaluation; the App was not installed in adopter repositories and customer value was not tested. |
 | Phase 18 bounded V1 publication | Immutable [`v1.0.0`](https://github.com/SAABOLImpactVenture/iaap-guard/tree/v1.0.0), [Phase 18 validation](PHASE-18-VALIDATION.md), and [V1 Contract Freeze](V1-CONTRACT-FREEZE.md) | Historical tag includes the retired CLI and composite Action; hosted App is the only supported current distribution. No GitHub Release object is claimed. |
 
+## Maintenance status
+
+`v1.0.1` remains fixed at its original commit. A tag and published GitHub Release
+object currently exist for that maintenance baseline. Repository publication is not
+runtime activation and does not establish a new distribution path, pilot authority,
+production qualification, or product authority.
+
+The `1.0.2` maintenance candidate removes live nonpublic-producer and cloud-account
+coordinates from the public validator. It uses an explicit portfolio-reference allowlist,
+generic cloud-coordinate detection, and synthetic negative fixtures. It does not move
+or recreate `v1.0.1`.
+
 ## Version identities
 
 The public V1 contract remains:
@@ -41,7 +53,7 @@ The public V1 contract remains:
 - planning catalog: `iaap-planning/v0.1.0`;
 - repository planning schema: `planning-report/v1`;
 - product planning schema: `product-planning-report/v1`; and
-- public maintenance candidate: `1.0.1`.
+- public maintenance candidate: `1.0.2`.
 
 The planning-catalog version and immutable public blob are frozen in
 [V1 Contract Freeze](V1-CONTRACT-FREEZE.md). This public ledger intentionally identifies

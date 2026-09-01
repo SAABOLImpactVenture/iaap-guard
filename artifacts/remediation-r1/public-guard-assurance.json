@@ -1,9 +1,9 @@
 {
   "schemaVersion": "public-guard-assurance/v1",
-  "recordVersion": "r1-pg2/v1",
-  "recordedAt": "2026-09-01T04:54:36Z",
+  "recordVersion": "r1-pg3/v1",
+  "recordedAt": "2026-09-01T10:27:43Z",
   "sourceEvidenceCutoff": "2026-09-01T04:10:06Z",
-  "maintenanceCandidateVersion": "1.0.1",
+  "maintenanceCandidateVersion": "1.0.2",
   "contracts": {
     "ruleCatalog": "iaap-guard/v0.1.2",
     "planningCatalog": "iaap-planning/v0.1.0",
@@ -157,5 +157,11 @@
     "infrastructureAuthorityAdded": false,
     "authorizationAuthorityAdded": false,
     "pilotAuthorized": false
+  },
+  "maintenanceState": {
+    "previousVersion": "1.0.1",
+    "previousRepositoryPublication": "tag-and-published-github-release-object",
+    "activationMeaning": "repository publication does not establish runtime activation, pilot authority, or production readiness",
+    "supersedingCandidate": "1.0.2"
   }
 }

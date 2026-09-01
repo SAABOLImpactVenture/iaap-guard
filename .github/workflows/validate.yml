@@ -15,6 +15,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install pinned YAML validation parser
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --no-deps \
+            --only-binary=:all: \
+            --require-hashes \
+            -r .github/validation-requirements.txt
       - name: Validate public contracts and distribution boundary
         shell: bash
         run: |
@@ -24,7 +37,11 @@ jobs:
           import json
           import re
           import tempfile
+          from html import unescape
           from pathlib import Path
+          from urllib.parse import unquote
+
+          import yaml
 
           for path in sorted(Path("schemas").glob("*.json")):
               json.loads(path.read_text(encoding="utf-8"))
@@ -134,14 +151,14 @@ jobs:
           if "| Planning catalog | `iaap-planning/v0.1.0` |" not in contract_freeze:
               raise SystemExit("planning catalog is not explicitly frozen")
 
-          if Path("VERSION").read_text(encoding="utf-8").strip() != "1.0.1":
-              raise SystemExit("public Guard maintenance version is not 1.0.1")
-          if "## 1.0.1 — maintenance candidate" not in Path("CHANGELOG.md").read_text(
+          if Path("VERSION").read_text(encoding="utf-8").strip() != "1.0.2":
+              raise SystemExit("public Guard maintenance version is not 1.0.2")
+          if "## 1.0.2 — maintenance candidate" not in Path("CHANGELOG.md").read_text(
               encoding="utf-8"
           ):
-              raise SystemExit("1.0.1 maintenance candidate is missing from changelog")
+              raise SystemExit("1.0.2 maintenance candidate is missing from changelog")
 
-          if assurance["maintenanceCandidateVersion"] != "1.0.1":
+          if assurance["maintenanceCandidateVersion"] != "1.0.2":
               raise SystemExit("assurance record does not match maintenance version")
           if assurance["contracts"]["planningCatalog"] != "iaap-planning/v0.1.0":
               raise SystemExit("assurance record does not match planning catalog")
@@ -271,18 +288,54 @@ jobs:
           ]["sanitizedRecordSha256"]:
               raise SystemExit("sanitized alarm-record integrity failed")
 
-          private_coordinate_patterns = [
-              r"arn:aws",
-              r"SAABOLImpactVenture/iaap-guard-core",
-              r"\b070096877875\b",
-          ]
+          allowed_portfolio_references = {
+              "ai-powered-infrastructure-as-a-product",
+              "backstage-infrastructure-product-storefront-poc",
+              "composite-ai-infrastructure-product-poc",
+              "crossplane-multicloud-seed-poc",
+              "iaap-guard",
+              "iaap-guard-adopter-validation",
+              "multicloud-foundation-poc-integration",
+              "multicloud-foundation-product-poc",
+          }
+          organization_repository_pattern = re.compile(
+              r"SAABOLImpactVenture/"
+              r"([A-Za-z0-9._-]*[A-Za-z0-9_-])",
+              flags=re.IGNORECASE,
+          )
+          github_coordinate_pattern = re.compile(
+              r"(?:https?://(?:api\.)?github\.com/|"
+              r"ssh://git@github\.com/|git@github\.com:)"
+              r"[^\s)\]`>]+",
+              flags=re.IGNORECASE,
+          )
+          github_coordinate_prefix = re.compile(
+              r"^(?:https?://(?:api\.)?github\.com/|"
+              r"ssh://git@github\.com/|git@github\.com:)",
+              flags=re.IGNORECASE,
+          )
+          generic_cloud_coordinate_patterns = {
+              "aws-arn": re.compile(
+                  r"\barn:aws(?:-[a-z0-9-]+)?:", flags=re.IGNORECASE
+              ),
+              "ecr-registry-account": re.compile(
+                  r"(?<!\d)\d{12}\.dkr\.ecr\.", flags=re.IGNORECASE
+              ),
+          }
+          contextual_account_pattern = re.compile(
+              r"""\b[A-Za-z0-9_-]*account(?:[\s_-]*(?:id|number))?s?\b"""
+              r"""["']?\s*[:=]\s*"""
+              r"""(?:(?:![^\s]+|&[^\s\[\]{},]+)\s+)*"""
+              r"""(?:["']?\d{12}\b|\[[^\]]*(?<!\d)\d{12}(?!\d)[^\]]*\])""",
+              flags=re.IGNORECASE,
+          )
 
           def assurance_surface_paths(root: Path) -> list[Path]:
               return sorted(
                   path
                   for path in root.rglob("*")
                   if path.is_file()
-                  and path.suffix.lower() in {".md", ".json", ".txt"}
+                  and path.suffix.lower() in {".md", ".json", ".txt", ".yaml", ".yml"}
                   and ".git" not in path.parts
               )
 
@@ -292,41 +345,814 @@ jobs:
                   for path in assurance_surface_paths(root)
               )
 
-          def private_coordinate_matches(text: str) -> list[str]:
-              return [
-                  pattern
-                  for pattern in private_coordinate_patterns
-                  if re.search(pattern, text, flags=re.IGNORECASE)
-              ]
+          account_id_pattern = re.compile(r"(?<!\d)\d{12}(?!\d)")
+          account_object_keys = {"id", "ids", "number", "numbers"}
+          textual_iam_principal_pattern = re.compile(
+              r"""\bPrincipal\b.{0,8192}?\bAWS\b.{0,8192}?"""
+              r"""(?<!\d)\d{12}(?!\d)""",
+              flags=re.IGNORECASE | re.DOTALL,
+          )
 
-          public_assurance_text = assurance_surface_text(Path("."))
-          leaked_patterns = private_coordinate_matches(public_assurance_text)
+          def account_value_present(value: object) -> bool:
+              if isinstance(value, bool):
+                  return False
+              if isinstance(value, int):
+                  return len(str(value)) == 12
+              if isinstance(value, str):
+                  normalized_value = decode_to_fixed_point(value).strip()
+                  return (
+                      account_id_pattern.fullmatch(normalized_value) is not None
+                  )
+              if isinstance(value, list):
+                  return any(account_value_present(child) for child in value)
+              if isinstance(value, dict):
+                  return any(
+                      isinstance(key, str)
+                      and key.casefold() in account_object_keys
+                      and account_value_present(child)
+                      for key, child in value.items()
+                  )
+              return False
+
+          def is_account_key(key: object) -> bool:
+              return isinstance(key, str) and re.search(
+                  r"account(?:[\s_-]*(?:id|number))?s?$",
+                  key,
+                  flags=re.IGNORECASE,
+              ) is not None
+
+          def json_account_coordinate_present(value: object) -> bool:
+              if isinstance(value, dict):
+                  for key, child in value.items():
+                      if is_account_key(key) and account_value_present(child):
+                          return True
+                      if json_account_coordinate_present(child):
+                          return True
+              elif isinstance(value, list):
+                  return any(
+                      json_account_coordinate_present(child) for child in value
+                  )
+              return False
+
+          def yaml_effective_mapping_children(
+              node: yaml.nodes.MappingNode,
+              resolving: set[int] | None = None,
+              memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
+          ) -> dict[str, yaml.nodes.Node]:
+              if resolving is None:
+                  resolving = set()
+              if memo is None:
+                  memo = {}
+              node_identity = id(node)
+              if node_identity in memo:
+                  return memo[node_identity]
+              if node_identity in resolving:
+                  return {}
+              resolving.add(node_identity)
+              try:
+                  explicit_children = {}
+                  merge_groups = []
+                  for key_node, child_node in node.value:
+                      if not isinstance(key_node, yaml.nodes.ScalarNode):
+                          continue
+                      if key_node.tag == "tag:yaml.org,2002:merge":
+                          if isinstance(child_node, yaml.nodes.MappingNode):
+                              merge_groups.append([child_node])
+                          elif isinstance(child_node, yaml.nodes.SequenceNode):
+                              merge_groups.append(
+                                  [
+                                      child
+                                      for child in child_node.value
+                                      if isinstance(
+                                          child, yaml.nodes.MappingNode
+                                      )
+                                  ]
+                              )
+                      else:
+                          explicit_children[key_node.value] = child_node
+                  effective_children = {}
+                  for merge_group in merge_groups:
+                      group_children = {}
+                      for merged_mapping in merge_group:
+                          for key, child in yaml_effective_mapping_children(
+                              merged_mapping, resolving, memo
+                          ).items():
+                              group_children.setdefault(key, child)
+                      # PyYAML accepts duplicate merge keys; a later merge
+                      # entry overrides an earlier entry, while earlier
+                      # mappings within one merge sequence retain precedence.
+                      effective_children.update(group_children)
+                  effective_children.update(explicit_children)
+                  memo[node_identity] = effective_children
+                  return effective_children
+              finally:
+                  resolving.remove(node_identity)
+
+          def yaml_node_account_value_present(
+              node: yaml.nodes.Node,
+              active: set[int] | None = None,
+              memo: dict[int, bool] | None = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
+          ) -> bool:
+              if active is None:
+                  active = set()
+              if memo is None:
+                  memo = {}
+              if mapping_memo is None:
+                  mapping_memo = {}
+              node_identity = id(node)
+              if node_identity in memo:
+                  return memo[node_identity]
+              if node_identity in active:
+                  return False
+              if isinstance(node, yaml.nodes.ScalarNode):
+                  normalized_value = decode_to_fixed_point(node.value).strip()
+                  result = account_id_pattern.search(normalized_value) is not None
+                  memo[node_identity] = result
+                  return result
+              if not isinstance(
+                  node, (yaml.nodes.MappingNode, yaml.nodes.SequenceNode)
+              ):
+                  memo[node_identity] = False
+                  return False
+              active.add(node_identity)
+              try:
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      children = [
+                          child
+                          for key, child in yaml_effective_mapping_children(
+                              node, memo=mapping_memo
+                          ).items()
+                          if key.casefold() in account_object_keys
+                      ]
+                  else:
+                      children = node.value
+                  result = any(
+                      yaml_node_account_value_present(
+                          child, active, memo, mapping_memo
+                      )
+                      for child in children
+                  )
+                  memo[node_identity] = result
+                  return result
+              finally:
+                  active.remove(node_identity)
+
+          def yaml_node_account_coordinate_present(
+              node: yaml.nodes.Node,
+              active: set[int] | None = None,
+              memo: dict[int, bool] | None = None,
+              value_memo: dict[int, bool] | None = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
+          ) -> bool:
+              if active is None:
+                  active = set()
+              if memo is None:
+                  memo = {}
+              if value_memo is None:
+                  value_memo = {}
+              if mapping_memo is None:
+                  mapping_memo = {}
+              node_identity = id(node)
+              if node_identity in memo:
+                  return memo[node_identity]
+              if node_identity in active:
+                  return False
+              active.add(node_identity)
+              try:
+                  result = False
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      children = yaml_effective_mapping_children(
+                          node, memo=mapping_memo
+                      )
+                      for key, child_node in children.items():
+                          if is_account_key(key) and yaml_node_account_value_present(
+                              child_node,
+                              memo=value_memo,
+                              mapping_memo=mapping_memo,
+                          ):
+                              result = True
+                              break
+                          if yaml_node_account_coordinate_present(
+                              child_node,
+                              active,
+                              memo,
+                              value_memo,
+                              mapping_memo,
+                          ):
+                              result = True
+                              break
+                  elif isinstance(node, yaml.nodes.SequenceNode):
+                      result = any(
+                          yaml_node_account_coordinate_present(
+                              child,
+                              active,
+                              memo,
+                              value_memo,
+                              mapping_memo,
+                          )
+                          for child in node.value
+                      )
+                  memo[node_identity] = result
+                  return result
+              finally:
+                  active.remove(node_identity)
+
+          def yaml_structured_account_coordinate_present(text: str) -> bool:
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if (
+                          document is not None
+                          and yaml_node_account_coordinate_present(document)
+                      ):
+                          return True
+              except yaml.YAMLError:
+                  return False
+              return False
+
+          def yaml_node_iam_principal_account_present(
+              node: yaml.nodes.Node,
+              active: set[int] | None = None,
+              memo: dict[int, bool] | None = None,
+              value_memo: dict[int, bool] | None = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
+          ) -> bool:
+              if active is None:
+                  active = set()
+              if memo is None:
+                  memo = {}
+              if value_memo is None:
+                  value_memo = {}
+              if mapping_memo is None:
+                  mapping_memo = {}
+              node_identity = id(node)
+              if node_identity in memo:
+                  return memo[node_identity]
+              if node_identity in active:
+                  return False
+              active.add(node_identity)
+              try:
+                  result = False
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      children = yaml_effective_mapping_children(
+                          node, memo=mapping_memo
+                      )
+                      for key, child_node in children.items():
+                          if (
+                              key.casefold() == "principal"
+                              and isinstance(child_node, yaml.nodes.MappingNode)
+                          ):
+                              principal_children = (
+                                  yaml_effective_mapping_children(
+                                      child_node, memo=mapping_memo
+                                  )
+                              )
+                              if any(
+                                  principal_key.casefold() == "aws"
+                                  and yaml_node_account_value_present(
+                                      principal_value,
+                                      memo=value_memo,
+                                      mapping_memo=mapping_memo,
+                                  )
+                                  for principal_key, principal_value in (
+                                      principal_children.items()
+                                  )
+                              ):
+                                  result = True
+                                  break
+                          if yaml_node_iam_principal_account_present(
+                              child_node,
+                              active,
+                              memo,
+                              value_memo,
+                              mapping_memo,
+                          ):
+                              result = True
+                              break
+                  elif isinstance(node, yaml.nodes.SequenceNode):
+                      result = any(
+                          yaml_node_iam_principal_account_present(
+                              child,
+                              active,
+                              memo,
+                              value_memo,
+                              mapping_memo,
+                          )
+                          for child in node.value
+                      )
+                  memo[node_identity] = result
+                  return result
+              finally:
+                  active.remove(node_identity)
+
+          def yaml_structured_iam_principal_account_present(
+              text: str,
+          ) -> bool | None:
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if (
+                          document is not None
+                          and yaml_node_iam_principal_account_present(document)
+                      ):
+                          return True
+              except yaml.YAMLError:
+                  return None
+              return False
+
+          def decoded_yaml_scalars(text: str) -> list[str]:
+              scalars = []
+
+              def collect(
+                  node: yaml.nodes.Node,
+                  visited: set[int],
+              ) -> None:
+                  node_identity = id(node)
+                  if node_identity in visited:
+                      return
+                  visited.add(node_identity)
+                  if isinstance(node, yaml.nodes.ScalarNode):
+                      scalars.append(
+                          decode_to_fixed_point(node.value).replace("\\", "/")
+                      )
+                  elif isinstance(node, yaml.nodes.MappingNode):
+                      for key_node, child_node in node.value:
+                          collect(key_node, visited)
+                          collect(child_node, visited)
+                  elif isinstance(node, yaml.nodes.SequenceNode):
+                      for child in node.value:
+                          collect(child, visited)
+
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if document is not None:
+                          collect(document, set())
+              except yaml.YAMLError:
+                  return []
+              return scalars
+
+          def json_iam_principal_account_present(value: object) -> bool:
+              if isinstance(value, dict):
+                  for key, child in value.items():
+                      if key.casefold() == "principal" and isinstance(child, dict):
+                          for principal_key, principal_value in child.items():
+                              if (
+                                  principal_key.casefold() == "aws"
+                                  and account_value_present(principal_value)
+                              ):
+                                  return True
+                      if json_iam_principal_account_present(child):
+                          return True
+              elif isinstance(value, list):
+                  return any(
+                      json_iam_principal_account_present(child) for child in value
+                  )
+              return False
+
+          def iam_principal_account_present(text: str) -> bool:
+              try:
+                  structured_value = json.loads(text)
+              except json.JSONDecodeError:
+                  structured_value = None
+              if (
+                  structured_value is not None
+                  and json_iam_principal_account_present(structured_value)
+              ):
+                  return True
+              yaml_iam_match = yaml_structured_iam_principal_account_present(
+                  text
+              )
+              if yaml_iam_match is not None:
+                  return yaml_iam_match
+              # Malformed YAML-like documentation still receives a bounded
+              # text scan; valid YAML is handled only by the parser above.
+              return textual_iam_principal_pattern.search(text) is not None
+
+          def json_account_text_present(text: str) -> bool:
+              try:
+                  structured_value = json.loads(text)
+              except json.JSONDecodeError:
+                  return False
+              return json_account_coordinate_present(structured_value)
+
+          def decode_to_fixed_point(value: str) -> str:
+              while True:
+                  decoded_value = unquote(unescape(value))
+                  if decoded_value == value:
+                      return value
+                  value = decoded_value
+
+          def decoded_json_strings(text: str) -> list[str]:
+              try:
+                  structured_value = json.loads(text)
+              except json.JSONDecodeError:
+                  return []
+
+              strings = []
+
+              def collect_strings(value: object) -> None:
+                  if isinstance(value, str):
+                      strings.append(
+                          decode_to_fixed_point(value).replace("\\", "/")
+                      )
+                  elif isinstance(value, dict):
+                      for key, child in value.items():
+                          collect_strings(key)
+                          collect_strings(child)
+                  elif isinstance(value, list):
+                      for child in value:
+                          collect_strings(child)
+
+              collect_strings(structured_value)
+              return strings
+
+          def private_coordinate_matches(text: str) -> list[str]:
+              matches = []
+              normalized_text = text.replace("\\", "/")
+              decoded_text = decode_to_fixed_point(normalized_text).replace("\\", "/")
+              repository_texts = [
+                  normalized_text,
+                  decoded_text,
+                  *decoded_json_strings(text),
+                  *decoded_json_strings(decoded_text),
+                  *decoded_yaml_scalars(text),
+                  *decoded_yaml_scalars(decoded_text),
+              ]
+              for coordinate_text in tuple(repository_texts):
+                  for coordinate_match in github_coordinate_pattern.finditer(
+                      coordinate_text
+                  ):
+                      decoded_coordinate = decode_to_fixed_point(
+                          coordinate_match.group(0)
+                      ).replace("\\", "/")
+                      repository_texts.append(decoded_coordinate)
+                      repository_path = github_coordinate_prefix.sub(
+                          "", decoded_coordinate, count=1
+                      )
+                      if any(
+                          segment in {".", ".."}
+                          for segment in repository_path.split("/")
+                      ):
+                          matches.append("github dot-segment")
+              for repository_text in repository_texts:
+                  for repository_match in organization_repository_pattern.finditer(
+                      repository_text
+                  ):
+                      repository = repository_match.group(1).casefold()
+                      if repository.endswith(".git"):
+                          repository = repository[:-4]
+                      if repository not in allowed_portfolio_references:
+                          matches.append("nonpublic same-owner repository")
+              matches.extend(
+                  label
+                  for label, pattern in generic_cloud_coordinate_patterns.items()
+                  if any(pattern.search(value) for value in repository_texts)
+              )
+              if (
+                  contextual_account_pattern.search(decoded_text)
+                  or json_account_text_present(text)
+                  or json_account_text_present(decoded_text)
+                  or yaml_structured_account_coordinate_present(text)
+                  or yaml_structured_account_coordinate_present(decoded_text)
+              ):
+                  matches.append("aws-account-label")
+              if (
+                  iam_principal_account_present(text)
+                  or iam_principal_account_present(decoded_text)
+              ):
+                  matches.append("iam-principal-account")
+              return sorted(set(matches))
+
+          public_assurance_paths = assurance_surface_paths(Path("."))
+          leaked_patterns = sorted(
+              {
+                  match
+                  for path in public_assurance_paths
+                  for match in private_coordinate_matches(
+                      path.read_text(encoding="utf-8")
+                  )
+              }
+          )
           if leaked_patterns:
               raise SystemExit(
                   f"private coordinates are present in assurance surface: {leaked_patterns}"
               )
 
-          private_link_mutations = [
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/commit/deadbeef",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/blob/deadbeef/file",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/tree/deadbeef",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/actions/runs/1",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
-              "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
-              "https://github.com/saabolimpactventure/IAAP-GUARD-CORE/blob/deadbeef/file",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core.git",
-              "git@github.com:SAABOLImpactVenture/iaap-guard-core.git",
-              "ssh://git@github.com/SAABOLImpactVenture/iaap-guard-core.git",
-              "[producer](https://github.com/SAABOLImpactVenture/iaap-guard-core)",
-              "`git@github.com:SAABOLImpactVenture/iaap-guard-core.git`",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core,",
-              "The producer is https://github.com/SAABOLImpactVenture/iaap-guard-core.",
+          for repository in allowed_portfolio_references:
+              public_coordinate = (
+                  "https://github.com/SAABOLImpactVenture/" + repository
+              )
+              if private_coordinate_matches(public_coordinate):
+                  raise SystemExit(
+                      f"allowlisted portfolio reference was rejected: {repository}"
+                  )
+
+          synthetic_public_identifier = "2" * 12
+          unrelated_identifier_record = json.dumps(
+              {
+                  "account": "public metadata" + "." * 48,
+                  "checkRunId": int(synthetic_public_identifier),
+              },
+              separators=(",", ":"),
+          )
+          if private_coordinate_matches(unrelated_identifier_record):
+              raise SystemExit(
+                  "unrelated 12-digit public identifier was rejected as an account"
+              )
+          unrelated_yaml_identifier = (
+              "account:\n"
+              "  label: public metadata\n"
+              f"  checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_identifier):
+              raise SystemExit(
+                  "nested unrelated YAML identifier was rejected as an account"
+              )
+          unrelated_yaml_sequence_mapping = (
+              "account:\n"
+              "  - label: public metadata\n"
+              f"    checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_sequence_mapping):
+              raise SystemExit(
+                  "unrelated YAML sequence metadata was rejected as an account"
+              )
+          unrelated_yaml_scalar_sibling = (
+              "account:\n"
+              "  - accountId: |-\n"
+              "      public metadata\n"
+              f"    checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_scalar_sibling):
+              raise SystemExit(
+                  "YAML block scalar absorbed unrelated sibling metadata"
+              )
+          unrelated_yaml_anchored_metadata = (
+              "metadata: &public\n"
+              f"  checkRunId: {synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_yaml_anchored_metadata):
+              raise SystemExit(
+                  "YAML account alias absorbed unrelated anchored metadata"
+              )
+          unrelated_yaml_anchor_comment = (
+              "safe: &public harmless # checkRunId: "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_yaml_anchor_comment):
+              raise SystemExit(
+                  "YAML account alias absorbed an inline anchor comment"
+              )
+          unrelated_plain_scalar_quote = (
+              'safe: &public harmless "note # checkRunId: '
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_plain_scalar_quote):
+              raise SystemExit(
+                  "plain YAML scalar quote suppressed an inline comment"
+              )
+          unrelated_tagged_scalar_quote = (
+              "safe: &public !foo'bar 'harmless' # checkRunId: "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_tagged_scalar_quote):
+              raise SystemExit(
+                  "YAML tag quote suppressed an inline scalar comment"
+              )
+          unrelated_comment_anchor = (
+              "safe: &public harmless\n"
+              "note: unrelated # note: &public "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_comment_anchor):
+              raise SystemExit(
+                  "YAML comment text was treated as an anchor declaration"
+              )
+          unrelated_node_like_comment_anchor = (
+              "safe: &public harmless\n"
+              "note: x # note: &public "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_node_like_comment_anchor):
+              raise SystemExit(
+                  "node-looking YAML comment was treated as an anchor"
+              )
+          unrelated_yaml_principal_metadata = (
+              "Principal: public\n"
+              "metadata:\n"
+              "  AWS: checkRunId "
+              f"{synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_principal_metadata):
+              raise SystemExit(
+                  "unrelated valid YAML Principal and AWS metadata were joined"
+              )
+          unrelated_yaml_merged_metadata = (
+              "defaults: &metadata-defaults\n"
+              f"  checkRunId: {synthetic_public_identifier}\n"
+              "account:\n"
+              "  <<: *metadata-defaults"
+          )
+          if private_coordinate_matches(unrelated_yaml_merged_metadata):
+              raise SystemExit(
+                  "account merge absorbed unrelated inherited metadata"
+              )
+          unrelated_yaml_overridden_account = (
+              "defaults: &account-defaults\n"
+              f"  id: {synthetic_public_identifier}\n"
+              "account:\n"
+              "  <<: *account-defaults\n"
+              "  id: public"
+          )
+          if private_coordinate_matches(unrelated_yaml_overridden_account):
+              raise SystemExit(
+                  "an overridden inherited account ID remained effective"
+              )
+          unrelated_yaml_overridden_principal = (
+              "defaults: &principal-defaults\n"
+              f"  AWS: {synthetic_public_identifier}\n"
+              "Principal:\n"
+              "  <<: *principal-defaults\n"
+              "  AWS: public"
+          )
+          if private_coordinate_matches(unrelated_yaml_overridden_principal):
+              raise SystemExit(
+                  "an overridden inherited Principal AWS value remained effective"
+              )
+          unrelated_yaml_later_harmless_merge = (
+              "live: &live-account-defaults\n"
+              f"  id: {synthetic_public_identifier}\n"
+              "public: &public-account-defaults\n"
+              "  id: public\n"
+              "account:\n"
+              "  <<: *live-account-defaults\n"
+              "  <<: *public-account-defaults"
+          )
+          if private_coordinate_matches(unrelated_yaml_later_harmless_merge):
+              raise SystemExit(
+                  "an earlier duplicate account merge overrode the later merge"
+              )
+
+          synthetic_repository = "private-producer"
+          synthetic_account = "1" * 12
+          long_gap = " " * 80
+          long_principal = "a" * 600
+          github_root = "https://github.com/" + "SAABOLImpactVenture/"
+          backslash_github_root = github_root.replace("/", chr(92))
+          alias_dag_lines = [
+              f'level0: &level0 ["{synthetic_account}"]'
           ]
-          for mutation in private_link_mutations:
+          for alias_level in range(1, 6):
+              repeated_aliases = ", ".join(
+                  [f"*level{alias_level - 1}"] * 10
+              )
+              alias_dag_lines.append(
+                  f"level{alias_level}: &level{alias_level} "
+                  f"[{repeated_aliases}]"
+              )
+          alias_dag_lines.append("account: *level5")
+          alias_dag_mutation = "\n".join(alias_dag_lines)
+          private_coordinate_mutations = [
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/commit/deadbeef",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/blob/deadbeef/file",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/tree/deadbeef",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/actions/runs/1",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/pull/1",
+              f"https://api.github.com/repos/SAABOLImpactVenture/{synthetic_repository}/contents/file",
+              f"https://github.com/saabolimpactventure/{synthetic_repository.upper()}/blob/deadbeef/file",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}",
+              f"{github_root}.{synthetic_repository}",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}.git",
+              f"git@github.com:SAABOLImpactVenture/{synthetic_repository}.git",
+              f"ssh://git@github.com/SAABOLImpactVenture/{synthetic_repository}.git",
+              f"[producer](https://github.com/SAABOLImpactVenture/{synthetic_repository})",
+              f"`git@github.com:SAABOLImpactVenture/{synthetic_repository}.git`",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository},",
+              f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
+              f"{github_root}iaap-guard/../{synthetic_repository}",
+              f"{github_root}iaap-guard/..\\{synthetic_repository}",
+              f"{backslash_github_root}{synthetic_repository}",
+              f"{github_root}iaap-guard/%2e%2e/{synthetic_repository}",
+              github_root + "%70rivate-producer",
+              github_root + "%2570rivate-producer",
+              'url: "'
+              + github_root
+              + chr(92)
+              + 'x70rivate-producer"',
+              github_root + "%25252570rivate-producer",
+              "https://github"
+              + "%2ecom/"
+              + "SAABOLImpactVenture/"
+              + "%70rivate-producer",
+              '<a href="'
+              + github_root
+              + "&#112;rivate-producer"
+              + '">producer</a>',
+              '{"url":"'
+              + github_root
+              + chr(92)
+              + "u0070"
+              + 'rivate-producer"}',
+              f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
+              f"{'arn'}%3Aaws%3Aiam%3A%3A{synthetic_account}%3Arole/example",
+              f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
+              f"AWS account ID: {synthetic_account}",
+              f'{{"accountId": "{synthetic_account}"}}',
+              f'{{"account": {{"id": "{synthetic_account}"}}}}',
+              f'account:\n  number: "{synthetic_account}"',
+              "defaults: &account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *account-defaults",
+              "defaults: &case-account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *case-account-defaults\n"
+              "  ID: public",
+              "public: &public-account-defaults {id: public}\n"
+              "live: &live-account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *public-account-defaults\n"
+              "  <<: *live-account-defaults",
+              "defaults: &principal-defaults\n"
+              f'  AWS: "{synthetic_account}"\n'
+              "Principal:\n"
+              "  <<: *principal-defaults",
+              alias_dag_mutation,
+              f'{{"recipientAccountId": "{synthetic_account}"}}',
+              f'{{"accountIds": ["{synthetic_account}"]}}',
+              f'{{"accountNumbers": ["{synthetic_account}"]}}',
+              f'accountIds:\n  - "{synthetic_account}"',
+              f'accountNumbers:\n- "{synthetic_account}"',
+              f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
+              f'accountId: |-\n  {synthetic_account}',
+              f'-account: |-\n {synthetic_account}',
+              f'? accountId\n: |-\n  {synthetic_account}',
+              'accountId: "'
+              + (chr(92) + "u0031") * 12
+              + '"',
+              'accountId: "'
+              + (chr(92) + "x31") * 12
+              + '"',
+              'accountId: "'
+              + synthetic_account[:6]
+              + chr(92)
+              + "\n  "
+              + synthetic_account[6:]
+              + '"',
+              'values: [ &account-id "'
+              + synthetic_account
+              + '", harmless ]\naccount: *account-id',
+              '"'
+              + chr(92)
+              + 'x61ccountId": "'
+              + synthetic_account
+              + '"',
+              'accountId: "harmless '
+              + chr(92)
+              + f'"\n  {synthetic_account}"',
+              "accountId: 'harmless ''\n  "
+              + synthetic_account
+              + "'",
+              f"safe: &account-id '\n  {synthetic_account}'\naccount: *account-id",
+              f'accountNumbers: >2+\n  {synthetic_account}',
+              f'account:\n  - accountId: |-\n      {synthetic_account}',
+              f'{{"sourceAccount": "{synthetic_account}"}}',
+              f'{{"accountId":\n"{synthetic_account}"}}',
+              f'{{"accountId":{long_gap}"{synthetic_account}"}}',
+              f'{{"note":"&quot;","accountId":\n\n"{synthetic_account}"}}',
+              f'{{"Principal": {{"AWS": "{synthetic_account}"}}}}',
+              f'{{"Principal": {{\n"AWS": "{synthetic_account}"\n}}}}',
+              f'{{"Principal": {{"AWS": ["{synthetic_account}"]}}}}',
+              f'{{"Principal": {{"AWS": ["*", "{synthetic_account}"]}}}}',
+              f'{{"Principal": {{"AWS": ["{long_principal}", "{synthetic_account}"]}}}}',
+              f'Principal:\n  AWS:\n    - "*"\n    - "{synthetic_account}"',
+              f'Principal:\n  AWS:\n  - "*"\n  - "{synthetic_account}"',
+              f'Principal: {{\nAWS: [\n"*", "{synthetic_account}"\n]\n}}',
+              f'Principal:\n  AWS: !!str "{synthetic_account}"',
+              f'Principal:\n  AWS: &account "{synthetic_account}"',
+              f'value: &principal-id "{synthetic_account}"\nPrincipal:\n  AWS: *principal-id',
+              f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
+              f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
+              f"{synthetic_account}%2edkr%2eecr%2eus-east-1%2eamazonaws%2ecom/example",
+              f"%61ccountId%3A%20{synthetic_account}",
+          ]
+          for mutation in private_coordinate_mutations:
               if not private_coordinate_matches(mutation):
                   raise SystemExit(
-                      f"private repository coordinate mutation was not rejected: {mutation}"
+                      f"private coordinate mutation was not rejected: {mutation}"
                   )
               with tempfile.TemporaryDirectory() as temporary_directory:
                   root = Path(temporary_directory)
@@ -339,9 +1165,15 @@ jobs:
                       assurance_document = root / relative_path
                       assurance_document.parent.mkdir(parents=True, exist_ok=True)
                       assurance_document.write_text(mutation, encoding="utf-8")
-                  if len(assurance_surface_paths(root)) != 4:
+                  mutation_paths = assurance_surface_paths(root)
+                  if len(mutation_paths) != 4:
                       raise SystemExit("case-variant assurance surfaces were not selected")
-                  if not private_coordinate_matches(assurance_surface_text(root)):
+                  if any(
+                      not private_coordinate_matches(
+                          path.read_text(encoding="utf-8")
+                      )
+                      for path in mutation_paths
+                  ):
                       raise SystemExit(
                           "private coordinate outside the evidence ledger was not rejected: "
                           f"{mutation}"
