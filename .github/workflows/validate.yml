@@ -25,6 +25,7 @@ jobs:
           import re
           import tempfile
           from pathlib import Path
+          from urllib.parse import unquote
 
           for path in sorted(Path("schemas").glob("*.json")):
               json.loads(path.read_text(encoding="utf-8"))
@@ -286,11 +287,29 @@ jobs:
               r"([A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)",
               flags=re.IGNORECASE,
           )
+          github_coordinate_pattern = re.compile(
+              r"(?:https?://(?:api\.)?github\.com/|"
+              r"ssh://git@github\.com/|git@github\.com:)"
+              r"[^\s)\]`>]+",
+              flags=re.IGNORECASE,
+          )
+          github_coordinate_prefix = re.compile(
+              r"^(?:https?://(?:api\.)?github\.com/|"
+              r"ssh://git@github\.com/|git@github\.com:)",
+              flags=re.IGNORECASE,
+          )
           generic_cloud_coordinate_patterns = {
               "aws-arn": re.compile(
-                  r"\barn:(?:aws|aws-us-gov|aws-cn):", flags=re.IGNORECASE
+                  r"\barn:aws(?:-[a-z0-9-]+)?:", flags=re.IGNORECASE
               ),
-              "twelve-digit-account": re.compile(r"(?<![0-9a-f])\d{12}(?![0-9a-f])", flags=re.IGNORECASE),
+              "aws-account-label": re.compile(
+                  r"\b(?:aws[\s_-]*)?account(?:[\s_-]*(?:id|number))?\b"
+                  r"[^0-9\n]{0,16}\d{12}\b",
+                  flags=re.IGNORECASE,
+              ),
+              "ecr-registry-account": re.compile(
+                  r"(?<!\d)\d{12}\.dkr\.ecr\.", flags=re.IGNORECASE
+              ),
           }
 
           def assurance_surface_paths(root: Path) -> list[Path]:
@@ -310,6 +329,16 @@ jobs:
 
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
+              for coordinate_match in github_coordinate_pattern.finditer(text):
+                  decoded_coordinate = unquote(coordinate_match.group(0))
+                  repository_path = github_coordinate_prefix.sub(
+                      "", decoded_coordinate, count=1
+                  )
+                  if any(
+                      segment in {".", ".."}
+                      for segment in repository_path.split("/")
+                  ):
+                      matches.append("github dot-segment")
               for repository_match in organization_repository_pattern.finditer(text):
                   repository = repository_match.group(1).casefold()
                   if repository.endswith(".git"):
@@ -357,8 +386,13 @@ jobs:
               f"`git@github.com:SAABOLImpactVenture/{synthetic_repository}.git`",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository},",
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
+              f"https://github.com/SAABOLImpactVenture/iaap-guard/../{synthetic_repository}",
+              f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
               f"arn:aws:iam::{synthetic_account}:role/example",
-              synthetic_account,
+              f"arn:aws-iso-b:s3:::synthetic-private-bucket",
+              f"AWS account ID: {synthetic_account}",
+              f'{{"accountId": "{synthetic_account}"}}',
+              f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
               if not private_coordinate_matches(mutation):
