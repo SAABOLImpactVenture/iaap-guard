@@ -273,10 +273,7 @@ jobs:
 
           private_coordinate_patterns = [
               r"arn:aws",
-              r"(?:https?://(?:api\.)?github\.com/(?:repos/)?|"
-              r"git@github\.com:|ssh://git@github\.com/)?"
-              r"SAABOLImpactVenture/iaap-guard-core"
-              r"(?:\.git)?(?=$|[^A-Za-z0-9._-])",
+              r"SAABOLImpactVenture/iaap-guard-core",
               r"\b070096877875\b",
           ]
 
@@ -324,6 +321,7 @@ jobs:
               "[producer](https://github.com/SAABOLImpactVenture/iaap-guard-core)",
               "`git@github.com:SAABOLImpactVenture/iaap-guard-core.git`",
               "https://github.com/SAABOLImpactVenture/iaap-guard-core,",
+              "The producer is https://github.com/SAABOLImpactVenture/iaap-guard-core.",
           ]
           for mutation in private_link_mutations:
               if not private_coordinate_matches(mutation):
