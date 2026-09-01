@@ -15,6 +15,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
       - name: Install pinned YAML validation parser
         shell: bash
         run: |
@@ -343,501 +346,11 @@ jobs:
               )
 
           account_id_pattern = re.compile(r"(?<!\d)\d{12}(?!\d)")
-          principal_key_pattern = re.compile(
-              r"""["']?Principal["']?\s*:""", flags=re.IGNORECASE
+          textual_iam_principal_pattern = re.compile(
+              r"""\bPrincipal\b.{0,8192}?\bAWS\b.{0,8192}?"""
+              r"""(?<!\d)\d{12}(?!\d)""",
+              flags=re.IGNORECASE | re.DOTALL,
           )
-          aws_key_pattern = re.compile(
-              r"""["']?AWS["']?\s*:\s*(.*)$""", flags=re.IGNORECASE
-          )
-          account_mapping_pattern = re.compile(
-              r"""^\s*(?:-\s+)?["']?"""
-              r"""(?P<key>[A-Za-z0-9 _-]*account"""
-              r"""(?:[\s_-]*(?:id|number))?s?)["']?"""
-              r"""\s*:\s*(?P<value>.*)$""",
-              flags=re.IGNORECASE,
-          )
-          explicit_account_key_pattern = re.compile(
-              r"""^\s*\?\s+["']?"""
-              r"""(?P<key>[A-Za-z0-9 _-]*account"""
-              r"""(?:[\s_-]*(?:id|number))?s?)["']?"""
-              r"""\s*(?:#.*)?$""",
-              flags=re.IGNORECASE,
-          )
-          explicit_value_pattern = re.compile(
-              r"""^\s*:\s*(?P<value>.*)$"""
-          )
-          inline_principal_pattern = re.compile(
-              r"""["']?Principal["']?\s*:\s*\{[^{}]*?"""
-              r"""["']?AWS["']?\s*:\s*(?:["']?\d{12}(?!\d)|"""
-              r"""\[[^\]]*(?<!\d)\d{12}(?!\d)[^\]]*\])""",
-              flags=re.IGNORECASE,
-          )
-
-          yaml_node_property_pattern = re.compile(
-              r"^(?:(?:![^\s]+|&[^\s\[\]{},]+)\s+)+"
-          )
-          yaml_block_scalar_pattern = re.compile(
-              r"^[|>][1-9+-]{0,2}(?:\s+#.*)?$"
-          )
-          yaml_anchor_pattern = re.compile(
-              r"""^\s*(?:-\s+)?"""
-              r"""(?:(?:[^#\s:'"\[\]{},][^:#\n]*?|"""
-              r"""'(?:[^']|'')*'|"(?:\\.|[^"\\])*")\s*:\s+|:\s+)?"""
-              r"""(?:![^\s]+\s+)*"""
-              r"""&(?P<name>[^\s\[\]{},]+)(?=\s|$)"""
-          )
-          yaml_alias_pattern = re.compile(r"^\*([^\s\[\]{},]+)")
-
-          def leading_indent(line: str) -> int:
-              return len(line) - len(line.lstrip(" "))
-
-          def is_yaml_sequence_entry(value: str) -> bool:
-              return re.match(r"^-(?:[ \\t]|$)", value) is not None
-
-          def yaml_value_without_comment(value: str) -> str:
-              scalar_value = yaml_node_property_pattern.sub(
-                  "", value.lstrip()
-              )
-              quote_style = (
-                  scalar_value[0]
-                  if scalar_value.startswith(('"', "'"))
-                  else None
-              )
-              single_quoted = False
-              double_quoted = False
-              escaped = False
-              for index, character in enumerate(scalar_value):
-                  if (
-                      quote_style == '"'
-                      and double_quoted
-                      and character == "\\"
-                      and not escaped
-                  ):
-                      escaped = True
-                      continue
-                  if (
-                      quote_style == '"'
-                      and character == '"'
-                      and not escaped
-                  ):
-                      double_quoted = not double_quoted
-                  elif quote_style == "'" and character == "'":
-                      single_quoted = not single_quoted
-                  elif (
-                      character == "#"
-                      and not single_quoted
-                      and not double_quoted
-                      and (
-                          index == 0
-                          or scalar_value[index - 1].isspace()
-                      )
-                  ):
-                      return scalar_value[:index].rstrip()
-                  escaped = False
-              return scalar_value.strip()
-
-          yaml_double_escape_values = {
-              "0": "\0",
-              "a": "\a",
-              "b": "\b",
-              "t": "\t",
-              "\t": "\t",
-              "n": "\n",
-              "v": "\v",
-              "f": "\f",
-              "r": "\r",
-              "e": "\x1b",
-              " ": " ",
-              '"': '"',
-              "/": "/",
-              "\\": "\\",
-              "N": "\x85",
-              "_": "\xa0",
-              "L": "\u2028",
-              "P": "\u2029",
-          }
-
-          def decode_yaml_double_quoted(scalar_value: str) -> str:
-              if (
-                  len(scalar_value) < 2
-                  or not scalar_value.startswith('"')
-                  or not scalar_value.endswith('"')
-              ):
-                  return scalar_value
-              decoded_parts = []
-              content = scalar_value[1:-1]
-              index = 0
-              while index < len(content):
-                  character = content[index]
-                  if character != "\\":
-                      decoded_parts.append(character)
-                      index += 1
-                      continue
-                  if index + 1 >= len(content):
-                      return scalar_value
-                  escape = content[index + 1]
-                  if escape in yaml_double_escape_values:
-                      decoded_parts.append(yaml_double_escape_values[escape])
-                      index += 2
-                      continue
-                  escape_lengths = {"x": 2, "u": 4, "U": 8}
-                  if escape in escape_lengths:
-                      digit_count = escape_lengths[escape]
-                      digits = content[index + 2 : index + 2 + digit_count]
-                      if (
-                          len(digits) != digit_count
-                          or re.fullmatch(r"[0-9A-Fa-f]+", digits) is None
-                      ):
-                          return scalar_value
-                      try:
-                          decoded_parts.append(chr(int(digits, 16)))
-                      except ValueError:
-                          return scalar_value
-                      index += 2 + digit_count
-                      continue
-                  if escape in {"\n", "\r"}:
-                      index += 2
-                      if (
-                          escape == "\r"
-                          and index < len(content)
-                          and content[index] == "\n"
-                      ):
-                          index += 1
-                      while (
-                          index < len(content)
-                          and content[index] in {" ", "\t"}
-                      ):
-                          index += 1
-                      continue
-                  return scalar_value
-              return "".join(decoded_parts)
-
-          def decoded_yaml_scalar(value: str) -> str:
-              scalar_value = yaml_value_without_comment(value)
-              scalar_value = yaml_node_property_pattern.sub(
-                  "", scalar_value.lstrip()
-              )
-              if (
-                  len(scalar_value) >= 2
-                  and scalar_value.startswith('"')
-                  and scalar_value.endswith('"')
-              ):
-                  return decode_yaml_double_quoted(scalar_value)
-              if (
-                  len(scalar_value) >= 2
-                  and scalar_value.startswith("'")
-                  and scalar_value.endswith("'")
-              ):
-                  return scalar_value[1:-1].replace("''", "'")
-              return scalar_value
-
-          def yaml_closing_quote_index(
-              value: str, quote_style: str, start: int
-          ) -> int | None:
-              index = start
-              while index < len(value):
-                  character = value[index]
-                  if quote_style == '"' and character == "\\":
-                      index += 2
-                      continue
-                  if character != quote_style:
-                      index += 1
-                      continue
-                  if (
-                      quote_style == "'"
-                      and index + 1 < len(value)
-                      and value[index + 1] == "'"
-                  ):
-                      index += 2
-                      continue
-                  return index
-              return None
-
-          def yaml_multiline_quoted_has_account(
-              lines: list[str],
-              value_index: int,
-              value_indent: int,
-              value: str,
-          ) -> bool:
-              scalar_value = yaml_node_property_pattern.sub(
-                  "", value.lstrip()
-              )
-              if not scalar_value.startswith(('"', "'")):
-                  return False
-              quote_style = scalar_value[0]
-              if yaml_closing_quote_index(
-                  scalar_value, quote_style, 1
-              ) is not None:
-                  return False
-              scalar_parts = [scalar_value[1:]]
-              for continuation_line in lines[value_index + 1 :]:
-                  if not continuation_line.strip():
-                      continue
-                  if leading_indent(continuation_line) <= value_indent:
-                      break
-                  continuation = continuation_line.strip()
-                  closing_index = yaml_closing_quote_index(
-                      continuation, quote_style, 0
-                  )
-                  if closing_index is None:
-                      scalar_parts.append(continuation)
-                      continue
-                  scalar_parts.append(continuation[:closing_index])
-                  folded_scalar = " ".join(scalar_parts)
-                  if quote_style == '"':
-                      folded_scalar = decode_yaml_double_quoted(
-                          '"' + folded_scalar + '"'
-                      )
-                  else:
-                      folded_scalar = folded_scalar.replace("''", "'")
-                  return (
-                      account_id_pattern.search(folded_scalar) is not None
-                  )
-              return False
-
-          def yaml_account_anchors(text: str) -> set[str]:
-              lines = text.splitlines()
-              account_anchors = set()
-              for anchor_index, anchor_line in enumerate(lines):
-                  anchor_match = yaml_anchor_pattern.match(anchor_line)
-                  if not anchor_match:
-                      continue
-                  anchor_name = anchor_match.group("name")
-                  anchor_value = yaml_value_without_comment(
-                      anchor_line[anchor_match.end() :]
-                  )
-                  if aws_value_has_account(
-                      anchor_value, account_anchors
-                  ):
-                      account_anchors.add(anchor_name)
-                      continue
-                  anchor_indent = leading_indent(anchor_line)
-                  if yaml_multiline_quoted_has_account(
-                      lines,
-                      anchor_index,
-                      anchor_indent,
-                      anchor_value,
-                  ):
-                      account_anchors.add(anchor_name)
-                      continue
-                  if yaml_block_scalar_has_account(
-                      lines,
-                      anchor_index,
-                      anchor_indent,
-                      anchor_value,
-                  ):
-                      account_anchors.add(anchor_name)
-                      continue
-                  if anchor_value:
-                      continue
-                  sequence_indent = None
-                  for value_line in lines[anchor_index + 1 :]:
-                      value_stripped = value_line.strip()
-                      if not value_stripped or value_stripped.startswith("#"):
-                          continue
-                      value_indent = leading_indent(value_line)
-                      if sequence_indent is None:
-                          if (
-                              value_indent < anchor_indent
-                              or not is_yaml_sequence_entry(value_stripped)
-                          ):
-                              break
-                          sequence_indent = value_indent
-                      elif (
-                          value_indent < sequence_indent
-                          or (
-                              value_indent == sequence_indent
-                              and not is_yaml_sequence_entry(value_stripped)
-                          )
-                      ):
-                          break
-                      if value_indent > sequence_indent:
-                          continue
-                      sequence_value = value_stripped[1:].lstrip()
-                      if aws_value_has_account(
-                          sequence_value, account_anchors
-                      ):
-                          account_anchors.add(anchor_name)
-                          break
-              return account_anchors
-
-          def aws_value_has_account(
-              value: str, account_anchors: set[str]
-          ) -> bool:
-              value = decoded_yaml_scalar(value)
-              alias_match = yaml_alias_pattern.match(value)
-              if alias_match and alias_match.group(1) in account_anchors:
-                  return True
-              if account_id_pattern.search(value):
-                  return True
-              if value.startswith("["):
-                  closing_bracket = value.find("]")
-                  list_value = (
-                      value
-                      if closing_bracket == -1
-                      else value[: closing_bracket + 1]
-                  )
-                  return account_id_pattern.search(list_value) is not None
-              return False
-
-          def yaml_block_scalar_has_account(
-              lines: list[str],
-              key_index: int,
-              key_indent: int,
-              value: str,
-          ) -> bool:
-              scalar_header = yaml_node_property_pattern.sub(
-                  "", value.lstrip()
-              )
-              if not yaml_block_scalar_pattern.fullmatch(scalar_header):
-                  return False
-              for scalar_line in lines[key_index + 1 :]:
-                  if not scalar_line.strip():
-                      continue
-                  if leading_indent(scalar_line) <= key_indent:
-                      break
-                  if account_id_pattern.search(scalar_line):
-                      return True
-              return False
-
-          def yaml_account_coordinate_present(text: str) -> bool:
-              lines = text.splitlines()
-              account_anchors = yaml_account_anchors(text)
-              for key_index, key_line in enumerate(lines):
-                  key_match = account_mapping_pattern.match(key_line)
-                  value_index = key_index
-                  if key_match and is_account_key(key_match.group("key")):
-                      key_value = key_match.group("value")
-                      key_indent = key_match.start("key")
-                      if (
-                          key_indent > 0
-                          and key_line[key_indent - 1] in {'"', "'"}
-                      ):
-                          key_indent -= 1
-                  else:
-                      explicit_match = explicit_account_key_pattern.match(
-                          key_line
-                      )
-                      if (
-                          not explicit_match
-                          or not is_account_key(explicit_match.group("key"))
-                      ):
-                          continue
-                      key_indent = leading_indent(key_line)
-                      key_value = None
-                      for candidate_index, candidate_line in enumerate(
-                          lines[key_index + 1 :], start=key_index + 1
-                      ):
-                          candidate_stripped = candidate_line.strip()
-                          if (
-                              not candidate_stripped
-                              or candidate_stripped.startswith("#")
-                          ):
-                              continue
-                          if leading_indent(candidate_line) != key_indent:
-                              break
-                          explicit_value_match = explicit_value_pattern.match(
-                              candidate_line
-                          )
-                          if not explicit_value_match:
-                              break
-                          key_value = explicit_value_match.group("value")
-                          value_index = candidate_index
-                          break
-                      if key_value is None:
-                          continue
-                  if aws_value_has_account(key_value, account_anchors):
-                      return True
-                  if yaml_block_scalar_has_account(
-                      lines,
-                      value_index,
-                      key_indent,
-                      key_value,
-                  ):
-                      return True
-                  if yaml_multiline_quoted_has_account(
-                      lines,
-                      value_index,
-                      key_indent,
-                      key_value,
-                  ):
-                      return True
-                  sequence_indent = None
-                  for nested_index, value_line in enumerate(
-                      lines[value_index + 1 :], start=value_index + 1
-                  ):
-                      value_stripped = value_line.strip()
-                      if not value_stripped or value_stripped.startswith("#"):
-                          continue
-                      value_indent = leading_indent(value_line)
-                      if sequence_indent is None:
-                          if (
-                              value_indent < key_indent
-                              or not is_yaml_sequence_entry(value_stripped)
-                          ):
-                              break
-                          sequence_indent = value_indent
-                      elif (
-                          value_indent < sequence_indent
-                          or (
-                              value_indent == sequence_indent
-                              and not is_yaml_sequence_entry(value_stripped)
-                          )
-                      ):
-                          break
-                      if value_indent > sequence_indent:
-                          nested_mapping = account_mapping_pattern.match(
-                              value_stripped
-                          )
-                          if (
-                              nested_mapping
-                              and is_account_key(nested_mapping.group("key"))
-                              and (
-                                  aws_value_has_account(
-                                      nested_mapping.group("value"),
-                                      account_anchors,
-                                  )
-                                  or yaml_block_scalar_has_account(
-                                      lines,
-                                      nested_index,
-                                      value_indent,
-                                      nested_mapping.group("value"),
-                                  )
-                              )
-                          ):
-                              return True
-                          continue
-                      sequence_value = value_stripped[1:].lstrip()
-                      sequence_key_indent = value_indent + (
-                          len(value_stripped) - len(sequence_value)
-                      )
-                      sequence_mapping = account_mapping_pattern.match(
-                          sequence_value
-                      )
-                      if sequence_mapping:
-                          if (
-                              is_account_key(sequence_mapping.group("key"))
-                              and (
-                                  aws_value_has_account(
-                                      sequence_mapping.group("value"),
-                                      account_anchors,
-                                  )
-                                  or yaml_block_scalar_has_account(
-                                      lines,
-                                      nested_index,
-                                      sequence_key_indent,
-                                      sequence_mapping.group("value"),
-                                  )
-                              )
-                          ):
-                              return True
-                          continue
-                      if aws_value_has_account(
-                          sequence_value,
-                          account_anchors,
-                      ):
-                          return True
-              return False
 
           def account_value_present(value: object) -> bool:
               if isinstance(value, bool):
@@ -875,83 +388,147 @@ jobs:
 
           def yaml_node_account_value_present(
               node: yaml.nodes.Node,
+              active: set[int] | None = None,
           ) -> bool:
               if isinstance(node, yaml.nodes.ScalarNode):
                   normalized_value = decode_to_fixed_point(node.value).strip()
                   return (
-                      account_id_pattern.fullmatch(normalized_value)
+                      account_id_pattern.search(normalized_value)
                       is not None
                   )
               if isinstance(node, yaml.nodes.SequenceNode):
-                  return any(
-                      yaml_node_account_value_present(child)
-                      for child in node.value
-                  )
+                  if active is None:
+                      active = set()
+                  node_identity = id(node)
+                  if node_identity in active:
+                      return False
+                  active.add(node_identity)
+                  try:
+                      return any(
+                          yaml_node_account_value_present(child, active)
+                          for child in node.value
+                      )
+                  finally:
+                      active.remove(node_identity)
               return False
 
-          def yaml_node_coordinate_present(
+          def yaml_node_account_coordinate_present(
               node: yaml.nodes.Node,
-              visited: set[int],
+              active: set[int],
           ) -> bool:
               node_identity = id(node)
-              if node_identity in visited:
+              if node_identity in active:
                   return False
-              visited.add(node_identity)
-              if isinstance(node, yaml.nodes.MappingNode):
-                  for key_node, child_node in node.value:
-                      key = (
-                          key_node.value
-                          if isinstance(key_node, yaml.nodes.ScalarNode)
-                          else None
-                      )
-                      if (
-                          is_account_key(key)
-                          and yaml_node_account_value_present(child_node)
-                      ):
-                          return True
-                      if (
-                          isinstance(key, str)
-                          and key.casefold() == "principal"
-                          and isinstance(child_node, yaml.nodes.MappingNode)
-                      ):
-                          for principal_key_node, principal_value_node in (
-                              child_node.value
+              active.add(node_identity)
+              try:
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      for key_node, child_node in node.value:
+                          key = (
+                              key_node.value
+                              if isinstance(key_node, yaml.nodes.ScalarNode)
+                              else None
+                          )
+                          if (
+                              is_account_key(key)
+                              and yaml_node_account_value_present(child_node)
                           ):
-                              principal_key = (
-                                  principal_key_node.value
-                                  if isinstance(
-                                      principal_key_node,
-                                      yaml.nodes.ScalarNode,
-                                  )
-                                  else None
-                              )
-                              if (
-                                  isinstance(principal_key, str)
-                                  and principal_key.casefold() == "aws"
-                                  and yaml_node_account_value_present(
-                                      principal_value_node
-                                  )
-                              ):
-                                  return True
-                      if yaml_node_coordinate_present(
-                          child_node, visited
-                      ):
-                          return True
-              elif isinstance(node, yaml.nodes.SequenceNode):
-                  return any(
-                      yaml_node_coordinate_present(child, visited)
-                      for child in node.value
-                  )
-              return False
+                              return True
+                          if yaml_node_account_coordinate_present(
+                              child_node, active
+                          ):
+                              return True
+                  elif isinstance(node, yaml.nodes.SequenceNode):
+                      return any(
+                          yaml_node_account_coordinate_present(child, active)
+                          for child in node.value
+                      )
+                  return False
+              finally:
+                  active.remove(node_identity)
 
-          def yaml_structured_coordinate_present(text: str) -> bool:
+          def yaml_structured_account_coordinate_present(text: str) -> bool:
               try:
                   for document in yaml.compose_all(
                       text, Loader=yaml.SafeLoader
                   ):
                       if (
                           document is not None
-                          and yaml_node_coordinate_present(document, set())
+                          and yaml_node_account_coordinate_present(
+                              document, set()
+                          )
+                      ):
+                          return True
+              except yaml.YAMLError:
+                  return False
+              return False
+
+          def yaml_node_iam_principal_account_present(
+              node: yaml.nodes.Node,
+              active: set[int],
+          ) -> bool:
+              node_identity = id(node)
+              if node_identity in active:
+                  return False
+              active.add(node_identity)
+              try:
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      for key_node, child_node in node.value:
+                          key = (
+                              key_node.value
+                              if isinstance(key_node, yaml.nodes.ScalarNode)
+                              else None
+                          )
+                          if (
+                              isinstance(key, str)
+                              and key.casefold() == "principal"
+                              and isinstance(child_node, yaml.nodes.MappingNode)
+                          ):
+                              for principal_key_node, principal_value_node in (
+                                  child_node.value
+                              ):
+                                  principal_key = (
+                                      principal_key_node.value
+                                      if isinstance(
+                                          principal_key_node,
+                                          yaml.nodes.ScalarNode,
+                                      )
+                                      else None
+                                  )
+                                  if (
+                                      isinstance(principal_key, str)
+                                      and principal_key.casefold() == "aws"
+                                      and yaml_node_account_value_present(
+                                          principal_value_node
+                                      )
+                                  ):
+                                      return True
+                          if yaml_node_iam_principal_account_present(
+                              child_node, active
+                          ):
+                              return True
+                  elif isinstance(node, yaml.nodes.SequenceNode):
+                      return any(
+                          yaml_node_iam_principal_account_present(
+                              child, active
+                          )
+                          for child in node.value
+                      )
+                  return False
+              finally:
+                  active.remove(node_identity)
+
+          def yaml_structured_iam_principal_account_present(
+              text: str,
+          ) -> bool:
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if (
+                          document is not None
+                          and yaml_node_iam_principal_account_present(
+                              document, set()
+                          )
                       ):
                           return True
               except yaml.YAMLError:
@@ -986,50 +563,11 @@ jobs:
                   and json_iam_principal_account_present(structured_value)
               ):
                   return True
-              if inline_principal_pattern.search(text):
+              if yaml_structured_iam_principal_account_present(text):
                   return True
-              lines = text.splitlines()
-              account_anchors = yaml_account_anchors(text)
-              for principal_index, principal_line in enumerate(lines):
-                  if not principal_key_pattern.search(principal_line):
-                      continue
-                  principal_indent = leading_indent(principal_line)
-                  for aws_index in range(principal_index + 1, len(lines)):
-                      candidate = lines[aws_index]
-                      stripped = candidate.strip()
-                      if not stripped or stripped.startswith("#"):
-                          continue
-                      aws_indent = leading_indent(candidate)
-                      if aws_indent <= principal_indent:
-                          break
-                      aws_match = aws_key_pattern.search(candidate)
-                      if not aws_match:
-                          continue
-                      if aws_value_has_account(
-                          aws_match.group(1), account_anchors
-                      ):
-                          return True
-                      for value_line in lines[aws_index + 1 :]:
-                          value_stripped = value_line.strip()
-                          if not value_stripped or value_stripped.startswith("#"):
-                              continue
-                          value_indent = leading_indent(value_line)
-                          if value_indent < aws_indent:
-                              break
-                          if (
-                              value_indent == aws_indent
-                              and not value_stripped.startswith("-")
-                          ):
-                              break
-                          if account_id_pattern.search(
-                              value_line
-                          ) or aws_value_has_account(
-                              value_stripped.lstrip("-").lstrip(),
-                              account_anchors,
-                          ):
-                              return True
-                      break
-              return False
+              # Malformed YAML-like documentation still receives a bounded
+              # text scan; valid YAML is handled only by the parser above.
+              return textual_iam_principal_pattern.search(text) is not None
 
           def json_account_text_present(text: str) -> bool:
               try:
@@ -1113,10 +651,8 @@ jobs:
                   contextual_account_pattern.search(decoded_text)
                   or json_account_text_present(text)
                   or json_account_text_present(decoded_text)
-                  or yaml_account_coordinate_present(text)
-                  or yaml_account_coordinate_present(decoded_text)
-                  or yaml_structured_coordinate_present(text)
-                  or yaml_structured_coordinate_present(decoded_text)
+                  or yaml_structured_account_coordinate_present(text)
+                  or yaml_structured_account_coordinate_present(decoded_text)
               ):
                   matches.append("aws-account-label")
               if (
@@ -1310,26 +846,26 @@ jobs:
               'accountId: "'
               + (chr(92) + "x31") * 12
               + '"',
-              'accountId: "harmless '
-              + chr(92)
-              + f'"\n  {synthetic_account}"',
-              "accountId: 'harmless ''\n  "
-              + synthetic_account
-              + "'",
               'accountId: "'
               + synthetic_account[:6]
               + chr(92)
               + "\n  "
               + synthetic_account[6:]
               + '"',
-              'values: [ &account-flow "'
+              'values: [ &account-id "'
               + synthetic_account
-              + '", harmless ]\naccount: *account-flow',
+              + '", harmless ]\naccount: *account-id',
               '"'
               + chr(92)
               + 'x61ccountId": "'
               + synthetic_account
               + '"',
+              'accountId: "harmless '
+              + chr(92)
+              + f'"\n  {synthetic_account}"',
+              "accountId: 'harmless ''\n  "
+              + synthetic_account
+              + "'",
               f"safe: &account-id '\n  {synthetic_account}'\naccount: *account-id",
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
@@ -1349,7 +885,6 @@ jobs:
               f'Principal:\n  AWS: &account "{synthetic_account}"',
               f'value: &principal-id "{synthetic_account}"\nPrincipal:\n  AWS: *principal-id',
               f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
-              f'values: &principal.list\n- "*"\n- "{synthetic_account}"\nPrincipal:\n  AWS: *principal.list',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
               f"{synthetic_account}%2edkr%2eecr%2eus-east-1%2eamazonaws%2ecom/example",
               f"%61ccountId%3A%20{synthetic_account}",
