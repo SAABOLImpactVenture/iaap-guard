@@ -342,10 +342,10 @@ jobs:
           )
 
           yaml_node_property_pattern = re.compile(
-              r"^(?:(?:![^\s]+|&[A-Za-z0-9_-]+)\s+)+"
+              r"^(?:(?:![^\s]+|&[^\s\[\]{},]+)\s+)+"
           )
-          yaml_anchor_pattern = re.compile(r"&([A-Za-z0-9_-]+)")
-          yaml_alias_pattern = re.compile(r"^\*([A-Za-z0-9_-]+)\b")
+          yaml_anchor_pattern = re.compile(r"&([^\s\[\]{},]+)")
+          yaml_alias_pattern = re.compile(r"^\*([^\s\[\]{},]+)")
 
           def leading_indent(line: str) -> int:
               return len(line) - len(line.lstrip(" "))
@@ -366,7 +366,13 @@ jobs:
                       value_stripped = value_line.strip()
                       if not value_stripped or value_stripped.startswith("#"):
                           continue
-                      if leading_indent(value_line) <= anchor_indent:
+                      value_indent = leading_indent(value_line)
+                      if value_indent < anchor_indent:
+                          break
+                      if (
+                          value_indent == anchor_indent
+                          and not value_stripped.startswith("-")
+                      ):
                           break
                       if account_id_pattern.search(value_line):
                           account_anchors.add(anchor_name)
@@ -536,6 +542,7 @@ jobs:
               f'Principal:\n  AWS: &account "{synthetic_account}"',
               f'value: &principal-id "{synthetic_account}"\nPrincipal:\n  AWS: *principal-id',
               f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
+              f'values: &principal.list\n- "*"\n- "{synthetic_account}"\nPrincipal:\n  AWS: *principal.list',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
