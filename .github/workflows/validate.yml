@@ -344,6 +344,16 @@ jobs:
               r"""\s*:\s*(?P<value>.*)$""",
               flags=re.IGNORECASE,
           )
+          explicit_account_key_pattern = re.compile(
+              r"""^\s*\?\s+["']?"""
+              r"""(?P<key>[A-Za-z0-9 _-]*account"""
+              r"""(?:[\s_-]*(?:id|number))?s?)["']?"""
+              r"""\s*(?:#.*)?$""",
+              flags=re.IGNORECASE,
+          )
+          explicit_value_pattern = re.compile(
+              r"""^\s*:\s*(?P<value>.*)$"""
+          )
           inline_principal_pattern = re.compile(
               r"""["']?Principal["']?\s*:\s*\{[^{}]*?"""
               r"""["']?AWS["']?\s*:\s*(?:["']?\d{12}(?!\d)|"""
@@ -363,6 +373,9 @@ jobs:
           def leading_indent(line: str) -> int:
               return len(line) - len(line.lstrip(" "))
 
+          def is_yaml_sequence_entry(value: str) -> bool:
+              return re.match(r"^-(?:[ \\t]|$)", value) is not None
+
           def yaml_account_anchors(text: str) -> set[str]:
               lines = text.splitlines()
               account_anchors = set()
@@ -371,23 +384,48 @@ jobs:
                   if not anchor_match:
                       continue
                   anchor_name = anchor_match.group(1)
-                  if account_id_pattern.search(anchor_line[anchor_match.end() :]):
+                  anchor_value = anchor_line[anchor_match.end() :].strip()
+                  if account_id_pattern.search(anchor_value):
                       account_anchors.add(anchor_name)
                       continue
                   anchor_indent = leading_indent(anchor_line)
+                  if yaml_block_scalar_has_account(
+                      lines,
+                      anchor_index,
+                      anchor_indent,
+                      anchor_value,
+                  ):
+                      account_anchors.add(anchor_name)
+                      continue
+                  if anchor_value:
+                      continue
+                  sequence_indent = None
                   for value_line in lines[anchor_index + 1 :]:
                       value_stripped = value_line.strip()
                       if not value_stripped or value_stripped.startswith("#"):
                           continue
                       value_indent = leading_indent(value_line)
-                      if value_indent < anchor_indent:
-                          break
-                      if (
-                          value_indent == anchor_indent
-                          and not value_stripped.startswith("-")
+                      if sequence_indent is None:
+                          if (
+                              value_indent < anchor_indent
+                              or not is_yaml_sequence_entry(value_stripped)
+                          ):
+                              break
+                          sequence_indent = value_indent
+                      elif (
+                          value_indent < sequence_indent
+                          or (
+                              value_indent == sequence_indent
+                              and not is_yaml_sequence_entry(value_stripped)
+                          )
                       ):
                           break
-                      if account_id_pattern.search(value_line):
+                      if value_indent > sequence_indent:
+                          continue
+                      sequence_value = value_stripped[1:].lstrip()
+                      if aws_value_has_account(
+                          sequence_value, account_anchors
+                      ):
                           account_anchors.add(anchor_name)
                           break
               return account_anchors
@@ -436,28 +474,59 @@ jobs:
               account_anchors = yaml_account_anchors(text)
               for key_index, key_line in enumerate(lines):
                   key_match = account_mapping_pattern.match(key_line)
-                  if not key_match or not is_account_key(key_match.group("key")):
-                      continue
-                  if aws_value_has_account(
-                      key_match.group("value"), account_anchors
-                  ):
+                  value_index = key_index
+                  if key_match and is_account_key(key_match.group("key")):
+                      key_value = key_match.group("value")
+                      key_indent = key_match.start("key")
+                      if (
+                          key_indent > 0
+                          and key_line[key_indent - 1] in {'"', "'"}
+                      ):
+                          key_indent -= 1
+                  else:
+                      explicit_match = explicit_account_key_pattern.match(
+                          key_line
+                      )
+                      if (
+                          not explicit_match
+                          or not is_account_key(explicit_match.group("key"))
+                      ):
+                          continue
+                      key_indent = leading_indent(key_line)
+                      key_value = None
+                      for candidate_index, candidate_line in enumerate(
+                          lines[key_index + 1 :], start=key_index + 1
+                      ):
+                          candidate_stripped = candidate_line.strip()
+                          if (
+                              not candidate_stripped
+                              or candidate_stripped.startswith("#")
+                          ):
+                              continue
+                          if leading_indent(candidate_line) != key_indent:
+                              break
+                          explicit_value_match = explicit_value_pattern.match(
+                              candidate_line
+                          )
+                          if not explicit_value_match:
+                              break
+                          key_value = explicit_value_match.group("value")
+                          value_index = candidate_index
+                          break
+                      if key_value is None:
+                          continue
+                  if aws_value_has_account(key_value, account_anchors):
                       return True
-                  key_indent = key_match.start("key")
-                  if (
-                      key_indent > 0
-                      and key_line[key_indent - 1] in {'"', "'"}
-                  ):
-                      key_indent -= 1
                   if yaml_block_scalar_has_account(
                       lines,
-                      key_index,
+                      value_index,
                       key_indent,
-                      key_match.group("value"),
+                      key_value,
                   ):
                       return True
                   sequence_indent = None
-                  for value_index, value_line in enumerate(
-                      lines[key_index + 1 :], start=key_index + 1
+                  for nested_index, value_line in enumerate(
+                      lines[value_index + 1 :], start=value_index + 1
                   ):
                       value_stripped = value_line.strip()
                       if not value_stripped or value_stripped.startswith("#"):
@@ -466,7 +535,7 @@ jobs:
                       if sequence_indent is None:
                           if (
                               value_indent < key_indent
-                              or not value_stripped.startswith("-")
+                              or not is_yaml_sequence_entry(value_stripped)
                           ):
                               break
                           sequence_indent = value_indent
@@ -474,7 +543,7 @@ jobs:
                           value_indent < sequence_indent
                           or (
                               value_indent == sequence_indent
-                              and not value_stripped.startswith("-")
+                              and not is_yaml_sequence_entry(value_stripped)
                           )
                       ):
                           break
@@ -492,7 +561,7 @@ jobs:
                                   )
                                   or yaml_block_scalar_has_account(
                                       lines,
-                                      value_index,
+                                      nested_index,
                                       value_indent,
                                       nested_mapping.group("value"),
                                   )
@@ -500,7 +569,7 @@ jobs:
                           ):
                               return True
                           continue
-                      sequence_value = value_stripped.lstrip("-").lstrip()
+                      sequence_value = value_stripped[1:].lstrip()
                       sequence_key_indent = value_indent + (
                           len(value_stripped) - len(sequence_value)
                       )
@@ -517,7 +586,7 @@ jobs:
                                   )
                                   or yaml_block_scalar_has_account(
                                       lines,
-                                      value_index,
+                                      nested_index,
                                       sequence_key_indent,
                                       sequence_mapping.group("value"),
                                   )
@@ -796,6 +865,15 @@ jobs:
               raise SystemExit(
                   "YAML block scalar absorbed unrelated sibling metadata"
               )
+          unrelated_yaml_anchored_metadata = (
+              "metadata: &public\n"
+              f"  checkRunId: {synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_yaml_anchored_metadata):
+              raise SystemExit(
+                  "YAML account alias absorbed unrelated anchored metadata"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -852,6 +930,7 @@ jobs:
               f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
               f'accountId: |-\n  {synthetic_account}',
               f'-account: |-\n {synthetic_account}',
+              f'? accountId\n: |-\n  {synthetic_account}',
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
