@@ -346,6 +346,7 @@ jobs:
               )
 
           account_id_pattern = re.compile(r"(?<!\d)\d{12}(?!\d)")
+          account_object_keys = {"id", "ids", "number", "numbers"}
           textual_iam_principal_pattern = re.compile(
               r"""\bPrincipal\b.{0,8192}?\bAWS\b.{0,8192}?"""
               r"""(?<!\d)\d{12}(?!\d)""",
@@ -367,7 +368,7 @@ jobs:
               if isinstance(value, dict):
                   return any(
                       isinstance(key, str)
-                      and key.casefold() in {"id", "ids", "number", "numbers"}
+                      and key.casefold() in account_object_keys
                       and account_value_present(child)
                       for key, child in value.items()
                   )
@@ -393,6 +394,44 @@ jobs:
                   )
               return False
 
+          def yaml_account_mapping_children(
+              node: yaml.nodes.MappingNode,
+              resolving: set[int] | None = None,
+          ) -> dict[str, yaml.nodes.Node]:
+              if resolving is None:
+                  resolving = set()
+              node_identity = id(node)
+              if node_identity in resolving:
+                  return {}
+              resolving.add(node_identity)
+              try:
+                  explicit_children = {}
+                  merged_mappings = []
+                  for key_node, child_node in node.value:
+                      if not isinstance(key_node, yaml.nodes.ScalarNode):
+                          continue
+                      if key_node.value.casefold() in account_object_keys:
+                          explicit_children[key_node.value.casefold()] = child_node
+                      elif key_node.tag == "tag:yaml.org,2002:merge":
+                          if isinstance(child_node, yaml.nodes.MappingNode):
+                              merged_mappings.append(child_node)
+                          elif isinstance(child_node, yaml.nodes.SequenceNode):
+                              merged_mappings.extend(
+                                  child
+                                  for child in child_node.value
+                                  if isinstance(child, yaml.nodes.MappingNode)
+                              )
+                  effective_children = {}
+                  for merged_mapping in merged_mappings:
+                      for key, child in yaml_account_mapping_children(
+                          merged_mapping, resolving
+                      ).items():
+                          effective_children.setdefault(key, child)
+                  effective_children.update(explicit_children)
+                  return effective_children
+              finally:
+                  resolving.remove(node_identity)
+
           def yaml_node_account_value_present(
               node: yaml.nodes.Node,
               active: set[int] | None = None,
@@ -415,13 +454,10 @@ jobs:
                   try:
                       if isinstance(node, yaml.nodes.MappingNode):
                           return any(
-                              isinstance(key_node, yaml.nodes.ScalarNode)
-                              and key_node.value.casefold()
-                              in {"<<", "id", "ids", "number", "numbers"}
-                              and yaml_node_account_value_present(
-                                  child_node, active
-                              )
-                              for key_node, child_node in node.value
+                              yaml_node_account_value_present(child, active)
+                              for child in yaml_account_mapping_children(
+                                  node
+                              ).values()
                           )
                       return any(
                           yaml_node_account_value_present(child, active)
@@ -853,6 +889,27 @@ jobs:
               raise SystemExit(
                   "unrelated valid YAML Principal and AWS metadata were joined"
               )
+          unrelated_yaml_merged_metadata = (
+              "defaults: &metadata-defaults\n"
+              f"  checkRunId: {synthetic_public_identifier}\n"
+              "account:\n"
+              "  <<: *metadata-defaults"
+          )
+          if private_coordinate_matches(unrelated_yaml_merged_metadata):
+              raise SystemExit(
+                  "account merge absorbed unrelated inherited metadata"
+              )
+          unrelated_yaml_overridden_account = (
+              "defaults: &account-defaults\n"
+              f"  id: {synthetic_public_identifier}\n"
+              "account:\n"
+              "  <<: *account-defaults\n"
+              "  id: public"
+          )
+          if private_coordinate_matches(unrelated_yaml_overridden_account):
+              raise SystemExit(
+                  "an overridden inherited account ID remained effective"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -907,8 +964,11 @@ jobs:
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"account": {{"id": "{synthetic_account}"}}}}',
-              f'defaults: &account-defaults {{id: "{synthetic_account}"}}\naccount: {{<<: *account-defaults}}',
               f'account:\n  number: "{synthetic_account}"',
+              "defaults: &account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *account-defaults",
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"accountIds": ["{synthetic_account}"]}}',
               f'{{"accountNumbers": ["{synthetic_account}"]}}',
