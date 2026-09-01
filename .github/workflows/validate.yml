@@ -310,6 +310,11 @@ jobs:
               "ecr-registry-account": re.compile(
                   r"(?<!\d)\d{12}\.dkr\.ecr\.", flags=re.IGNORECASE
               ),
+              "iam-principal-account": re.compile(
+                  r"""["']Principal["']\s*:\s*\{[^{}]{0,512}"""
+                  r"""["']AWS["']\s*:\s*(?:\[\s*)?["']?\d{12}\b""",
+                  flags=re.IGNORECASE,
+              ),
           }
 
           def assurance_surface_paths(root: Path) -> list[Path]:
@@ -329,8 +334,9 @@ jobs:
 
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
-              repository_texts = [text]
-              for coordinate_match in github_coordinate_pattern.finditer(text):
+              normalized_text = text.replace("\\", "/")
+              repository_texts = [normalized_text]
+              for coordinate_match in github_coordinate_pattern.finditer(normalized_text):
                   decoded_coordinate = coordinate_match.group(0)
                   for _ in range(3):
                       next_decoded_coordinate = unquote(decoded_coordinate)
@@ -399,6 +405,7 @@ jobs:
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/../{synthetic_repository}",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/..\\{synthetic_repository}",
+              f"https://github.com\\SAABOLImpactVenture\\{synthetic_repository}",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
               "https://github.com/SAABOLImpactVenture/%70rivate-producer",
               "https://github.com/SAABOLImpactVenture/%2570rivate-producer",
@@ -408,6 +415,8 @@ jobs:
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
+              f'{{"Principal": {{"AWS": "{synthetic_account}"}}}}',
+              f'{{"Principal": {{"AWS": ["{synthetic_account}"]}}}}',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
