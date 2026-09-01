@@ -442,7 +442,11 @@ jobs:
                       key_match.group("value"), account_anchors
                   ):
                       return True
-                  key_indent = leading_indent(key_line)
+                  key_stripped = key_line.strip()
+                  key_without_sequence = key_stripped.lstrip("-").lstrip()
+                  key_indent = leading_indent(key_line) + (
+                      len(key_stripped) - len(key_without_sequence)
+                  )
                   if yaml_block_scalar_has_account(
                       lines,
                       key_index,
