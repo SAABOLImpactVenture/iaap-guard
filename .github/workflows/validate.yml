@@ -198,12 +198,6 @@ jobs:
           ]["sanitizedRecordSha256"]:
               raise SystemExit("sanitized alarm-record integrity failed")
 
-          public_assurance_text = "\n".join(
-              [
-                  Path("docs/ASSURANCE-EVIDENCE.md").read_text(encoding="utf-8"),
-                  json.dumps(assurance, sort_keys=True),
-              ]
-          )
           private_coordinate_patterns = [
               r"arn:aws",
               r"(?:github\.com/|api\.github\.com/repos/)?"
@@ -211,13 +205,28 @@ jobs:
               r"\b070096877875\b",
           ]
 
+          def assurance_surface_paths(root: Path) -> list[Path]:
+              return sorted(
+                  path
+                  for suffix in ("*.md", "*.json")
+                  for path in root.rglob(suffix)
+                  if ".git" not in path.parts
+              )
+
+          def assurance_surface_text(root: Path) -> str:
+              return "\n".join(
+                  path.read_text(encoding="utf-8")
+                  for path in assurance_surface_paths(root)
+              )
+
           def private_coordinate_matches(text: str) -> list[str]:
               return [
                   pattern
                   for pattern in private_coordinate_patterns
-                  if re.search(pattern, text)
+                  if re.search(pattern, text, flags=re.IGNORECASE)
               ]
 
+          public_assurance_text = assurance_surface_text(Path("."))
           leaked_patterns = private_coordinate_matches(public_assurance_text)
           if leaked_patterns:
               raise SystemExit(
@@ -231,12 +240,23 @@ jobs:
               "https://github.com/SAABOLImpactVenture/iaap-guard-core/actions/runs/1",
               "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
               "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
+              "https://github.com/saabolimpactventure/IAAP-GUARD-CORE/blob/deadbeef/file",
           ]
           for mutation in private_link_mutations:
               if not private_coordinate_matches(mutation):
                   raise SystemExit(
                       f"private repository coordinate mutation was not rejected: {mutation}"
                   )
+              with tempfile.TemporaryDirectory() as temporary_directory:
+                  root = Path(temporary_directory)
+                  phase_document = root / "docs/PHASE-16-VALIDATION.md"
+                  phase_document.parent.mkdir(parents=True)
+                  phase_document.write_text(mutation, encoding="utf-8")
+                  if not private_coordinate_matches(assurance_surface_text(root)):
+                      raise SystemExit(
+                          "private coordinate outside the evidence ledger was not rejected: "
+                          f"{mutation}"
+                      )
 
           link_pattern = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
           broken_local_links = []
