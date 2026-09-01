@@ -481,9 +481,9 @@ jobs:
               matches.extend(
                   label
                   for label, pattern in generic_cloud_coordinate_patterns.items()
-                  if pattern.search(text)
+                  if pattern.search(decoded_text)
               )
-              if iam_principal_account_present(text):
+              if iam_principal_account_present(decoded_text):
                   matches.append("iam-principal-account")
               return sorted(set(matches))
 
@@ -536,6 +536,7 @@ jobs:
               + "SAABOLImpactVenture/"
               + "%70rivate-producer",
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
+              f"{'arn'}%3Aaws%3Aiam%3A%3A{synthetic_account}%3Arole/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
@@ -553,6 +554,8 @@ jobs:
               f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
               f'values: &principal.list\n- "*"\n- "{synthetic_account}"\nPrincipal:\n  AWS: *principal.list',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
+              f"{synthetic_account}%2edkr%2eecr%2eus-east-1%2eamazonaws%2ecom/example",
+              f"%61ccountId%3A%20{synthetic_account}",
           ]
           for mutation in private_coordinate_mutations:
               if not private_coordinate_matches(mutation):
