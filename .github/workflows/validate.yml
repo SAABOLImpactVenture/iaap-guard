@@ -377,16 +377,33 @@ jobs:
               return re.match(r"^-(?:[ \\t]|$)", value) is not None
 
           def yaml_value_without_comment(value: str) -> str:
+              scalar_value = yaml_node_property_pattern.sub(
+                  "", value.lstrip()
+              )
+              quote_style = (
+                  scalar_value[0]
+                  if scalar_value.startswith(('"', "'"))
+                  else None
+              )
               single_quoted = False
               double_quoted = False
               escaped = False
               for index, character in enumerate(value):
-                  if double_quoted and character == "\\" and not escaped:
+                  if (
+                      quote_style == '"'
+                      and double_quoted
+                      and character == "\\"
+                      and not escaped
+                  ):
                       escaped = True
                       continue
-                  if character == '"' and not single_quoted and not escaped:
+                  if (
+                      quote_style == '"'
+                      and character == '"'
+                      and not escaped
+                  ):
                       double_quoted = not double_quoted
-                  elif character == "'" and not double_quoted:
+                  elif quote_style == "'" and character == "'":
                       single_quoted = not single_quoted
                   elif (
                       character == "#"
@@ -906,6 +923,15 @@ jobs:
           if private_coordinate_matches(unrelated_yaml_anchor_comment):
               raise SystemExit(
                   "YAML account alias absorbed an inline anchor comment"
+              )
+          unrelated_plain_scalar_quote = (
+              'safe: &public harmless "note # checkRunId: '
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_plain_scalar_quote):
+              raise SystemExit(
+                  "plain YAML scalar quote suppressed an inline comment"
               )
 
           synthetic_repository = "private-producer"
