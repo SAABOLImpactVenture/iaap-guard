@@ -134,14 +134,14 @@ jobs:
           if "| Planning catalog | `iaap-planning/v0.1.0` |" not in contract_freeze:
               raise SystemExit("planning catalog is not explicitly frozen")
 
-          if Path("VERSION").read_text(encoding="utf-8").strip() != "1.0.1":
-              raise SystemExit("public Guard maintenance version is not 1.0.1")
-          if "## 1.0.1 — maintenance candidate" not in Path("CHANGELOG.md").read_text(
+          if Path("VERSION").read_text(encoding="utf-8").strip() != "1.0.2":
+              raise SystemExit("public Guard maintenance version is not 1.0.2")
+          if "## 1.0.2 — maintenance candidate" not in Path("CHANGELOG.md").read_text(
               encoding="utf-8"
           ):
-              raise SystemExit("1.0.1 maintenance candidate is missing from changelog")
+              raise SystemExit("1.0.2 maintenance candidate is missing from changelog")
 
-          if assurance["maintenanceCandidateVersion"] != "1.0.1":
+          if assurance["maintenanceCandidateVersion"] != "1.0.2":
               raise SystemExit("assurance record does not match maintenance version")
           if assurance["contracts"]["planningCatalog"] != "iaap-planning/v0.1.0":
               raise SystemExit("assurance record does not match planning catalog")
@@ -271,11 +271,22 @@ jobs:
           ]["sanitizedRecordSha256"]:
               raise SystemExit("sanitized alarm-record integrity failed")
 
-          private_coordinate_patterns = [
-              r"arn:aws",
-              r"SAABOLImpactVenture/iaap-guard-core",
-              r"\b070096877875\b",
-          ]
+          allowed_public_repositories = {
+              "ai-powered-infrastructure-as-a-product",
+              "iaap-guard",
+              "iaap-guard-adopter-validation",
+          }
+          organization_repository_pattern = re.compile(
+              r"SAABOLImpactVenture/"
+              r"([A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)",
+              flags=re.IGNORECASE,
+          )
+          generic_cloud_coordinate_patterns = {
+              "aws-arn": re.compile(
+                  r"\barn:(?:aws|aws-us-gov|aws-cn):", flags=re.IGNORECASE
+              ),
+              "twelve-digit-account": re.compile(r"(?<!\d)\d{12}(?!\d)"),
+          }
 
           def assurance_surface_paths(root: Path) -> list[Path]:
               return sorted(
@@ -293,11 +304,19 @@ jobs:
               )
 
           def private_coordinate_matches(text: str) -> list[str]:
-              return [
-                  pattern
-                  for pattern in private_coordinate_patterns
-                  if re.search(pattern, text, flags=re.IGNORECASE)
-              ]
+              matches = []
+              for repository_match in organization_repository_pattern.finditer(text):
+                  repository = repository_match.group(1).casefold()
+                  if repository.endswith(".git"):
+                      repository = repository[:-4]
+                  if repository not in allowed_public_repositories:
+                      matches.append("nonpublic same-owner repository")
+              matches.extend(
+                  label
+                  for label, pattern in generic_cloud_coordinate_patterns.items()
+                  if pattern.search(text)
+              )
+              return sorted(set(matches))
 
           public_assurance_text = assurance_surface_text(Path("."))
           leaked_patterns = private_coordinate_matches(public_assurance_text)
@@ -306,27 +325,40 @@ jobs:
                   f"private coordinates are present in assurance surface: {leaked_patterns}"
               )
 
-          private_link_mutations = [
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/commit/deadbeef",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/blob/deadbeef/file",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/tree/deadbeef",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/actions/runs/1",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
-              "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
-              "https://github.com/saabolimpactventure/IAAP-GUARD-CORE/blob/deadbeef/file",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core.git",
-              "git@github.com:SAABOLImpactVenture/iaap-guard-core.git",
-              "ssh://git@github.com/SAABOLImpactVenture/iaap-guard-core.git",
-              "[producer](https://github.com/SAABOLImpactVenture/iaap-guard-core)",
-              "`git@github.com:SAABOLImpactVenture/iaap-guard-core.git`",
-              "https://github.com/SAABOLImpactVenture/iaap-guard-core,",
-              "The producer is https://github.com/SAABOLImpactVenture/iaap-guard-core.",
+          for repository in allowed_public_repositories:
+              public_coordinate = (
+                  "https://github.com/SAABOLImpactVenture/" + repository
+              )
+              if private_coordinate_matches(public_coordinate):
+                  raise SystemExit(
+                      f"allowlisted public repository was rejected: {repository}"
+                  )
+
+          synthetic_repository = "private-producer"
+          synthetic_account = "1" * 12
+          private_coordinate_mutations = [
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/commit/deadbeef",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/blob/deadbeef/file",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/tree/deadbeef",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/actions/runs/1",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/pull/1",
+              f"https://api.github.com/repos/SAABOLImpactVenture/{synthetic_repository}/contents/file",
+              f"https://github.com/saabolimpactventure/{synthetic_repository.upper()}/blob/deadbeef/file",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository}.git",
+              f"git@github.com:SAABOLImpactVenture/{synthetic_repository}.git",
+              f"ssh://git@github.com/SAABOLImpactVenture/{synthetic_repository}.git",
+              f"[producer](https://github.com/SAABOLImpactVenture/{synthetic_repository})",
+              f"`git@github.com:SAABOLImpactVenture/{synthetic_repository}.git`",
+              f"https://github.com/SAABOLImpactVenture/{synthetic_repository},",
+              f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
+              f"arn:aws:iam::{synthetic_account}:role/example",
+              synthetic_account,
           ]
-          for mutation in private_link_mutations:
+          for mutation in private_coordinate_mutations:
               if not private_coordinate_matches(mutation):
                   raise SystemExit(
-                      f"private repository coordinate mutation was not rejected: {mutation}"
+                      f"private coordinate mutation was not rejected: {mutation}"
                   )
               with tempfile.TemporaryDirectory() as temporary_directory:
                   root = Path(temporary_directory)
