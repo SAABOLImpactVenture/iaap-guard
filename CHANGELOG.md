@@ -4,7 +4,7 @@
 
 - remove the literal nonpublic-producer repository coordinate and live cloud-account
   identifier from the public validator;
-- reject nonpublic same-organization repository references through an explicit public
+- reject nonpublic same-organization repository references through an explicit portfolio-reference
   allowlist instead of naming the protected producer;
 - reject AWS ARNs and 12-digit cloud-account identifiers generically; and
 - prove the boundary with synthetic root, clone, path, case, punctuation, Markdown,
