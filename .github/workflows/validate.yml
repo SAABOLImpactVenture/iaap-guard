@@ -337,6 +337,7 @@ jobs:
                       if next_decoded_coordinate == decoded_coordinate:
                           break
                       decoded_coordinate = next_decoded_coordinate
+                  decoded_coordinate = decoded_coordinate.replace("\\", "/")
                   repository_texts.append(decoded_coordinate)
                   repository_path = github_coordinate_prefix.sub(
                       "", decoded_coordinate, count=1
@@ -397,6 +398,7 @@ jobs:
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository},",
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/../{synthetic_repository}",
+              f"https://github.com/SAABOLImpactVenture/iaap-guard/..\\{synthetic_repository}",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
               "https://github.com/SAABOLImpactVenture/%70rivate-producer",
               "https://github.com/SAABOLImpactVenture/%2570rivate-producer",
