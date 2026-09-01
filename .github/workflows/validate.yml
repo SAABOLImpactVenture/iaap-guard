@@ -310,11 +310,6 @@ jobs:
               "ecr-registry-account": re.compile(
                   r"(?<!\d)\d{12}\.dkr\.ecr\.", flags=re.IGNORECASE
               ),
-              "iam-principal-account": re.compile(
-                  r"""["']Principal["']\s*:\s*\{[^{}]{0,512}"""
-                  r"""["']AWS["']\s*:\s*(?:["']?\d{12}\b|\[[^\]]{0,512}\b\d{12}\b)""",
-                  flags=re.IGNORECASE,
-              ),
           }
 
           def assurance_surface_paths(root: Path) -> list[Path]:
@@ -331,6 +326,69 @@ jobs:
                   path.read_text(encoding="utf-8")
                   for path in assurance_surface_paths(root)
               )
+
+          account_id_pattern = re.compile(r"(?<!\\d)\\d{12}(?!\\d)")
+          principal_key_pattern = re.compile(
+              r"""["']?Principal["']?\\s*:""", flags=re.IGNORECASE
+          )
+          aws_key_pattern = re.compile(
+              r"""["']?AWS["']?\\s*:\\s*(.*)$""", flags=re.IGNORECASE
+          )
+          inline_principal_pattern = re.compile(
+              r"""["']?Principal["']?\\s*:\\s*\\{[^{}\\n]*?"""
+              r"""["']?AWS["']?\\s*:\\s*(?:["']?\\d{12}(?!\\d)|"""
+              r"""\\[[^\\]\\n]*(?<!\\d)\\d{12}(?!\\d)[^\\]\\n]*\\])""",
+              flags=re.IGNORECASE,
+          )
+
+          def leading_indent(line: str) -> int:
+              return len(line) - len(line.lstrip(" "))
+
+          def aws_value_has_account(value: str) -> bool:
+              value = value.lstrip()
+              if re.match(r"""["']?\\d{12}(?!\\d)""", value):
+                  return True
+              if value.startswith("["):
+                  closing_bracket = value.find("]")
+                  list_value = (
+                      value
+                      if closing_bracket == -1
+                      else value[: closing_bracket + 1]
+                  )
+                  return account_id_pattern.search(list_value) is not None
+              return False
+
+          def iam_principal_account_present(text: str) -> bool:
+              if inline_principal_pattern.search(text):
+                  return True
+              lines = text.splitlines()
+              for principal_index, principal_line in enumerate(lines):
+                  if not principal_key_pattern.search(principal_line):
+                      continue
+                  principal_indent = leading_indent(principal_line)
+                  for aws_index in range(principal_index + 1, len(lines)):
+                      candidate = lines[aws_index]
+                      stripped = candidate.strip()
+                      if not stripped or stripped.startswith("#"):
+                          continue
+                      aws_indent = leading_indent(candidate)
+                      if aws_indent <= principal_indent:
+                          break
+                      aws_match = aws_key_pattern.search(candidate)
+                      if not aws_match:
+                          continue
+                      if aws_value_has_account(aws_match.group(1)):
+                          return True
+                      for value_line in lines[aws_index + 1 :]:
+                          value_stripped = value_line.strip()
+                          if not value_stripped or value_stripped.startswith("#"):
+                              continue
+                          if leading_indent(value_line) <= aws_indent:
+                              break
+                          if account_id_pattern.search(value_line):
+                              return True
+                      break
+              return False
 
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
@@ -367,6 +425,8 @@ jobs:
                   for label, pattern in generic_cloud_coordinate_patterns.items()
                   if pattern.search(text)
               )
+              if iam_principal_account_present(text):
+                  matches.append("iam-principal-account")
               return sorted(set(matches))
 
           public_assurance_text = assurance_surface_text(Path("."))
@@ -387,6 +447,7 @@ jobs:
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
+          long_principal = "a" * 600
           github_root = "https://github.com/" + "SAABOLImpactVenture/"
           backslash_github_root = github_root.replace("/", chr(92))
           private_coordinate_mutations = [
@@ -420,6 +481,8 @@ jobs:
               f'{{"Principal": {{"AWS": "{synthetic_account}"}}}}',
               f'{{"Principal": {{"AWS": ["{synthetic_account}"]}}}}',
               f'{{"Principal": {{"AWS": ["*", "{synthetic_account}"]}}}}',
+              f'{{"Principal": {{"AWS": ["{long_principal}", "{synthetic_account}"]}}}}',
+              f'Principal:\n  AWS:\n    - "*"\n    - "{synthetic_account}"',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
