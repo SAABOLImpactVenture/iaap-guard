@@ -442,6 +442,18 @@ jobs:
                       ):
                           break
                       if value_indent > sequence_indent:
+                          nested_mapping = account_mapping_pattern.match(
+                              value_stripped
+                          )
+                          if (
+                              nested_mapping
+                              and is_account_key(nested_mapping.group("key"))
+                              and aws_value_has_account(
+                                  nested_mapping.group("value"),
+                                  account_anchors,
+                              )
+                          ):
+                              return True
                           continue
                       sequence_value = value_stripped.lstrip("-").lstrip()
                       sequence_mapping = account_mapping_pattern.match(
@@ -771,6 +783,7 @@ jobs:
               f'{{"accountNumbers": ["{synthetic_account}"]}}',
               f'accountIds:\n  - "{synthetic_account}"',
               f'accountNumbers:\n- "{synthetic_account}"',
+              f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
               f'{{"sourceAccount": "{synthetic_account}"}}',
               f'{{"accountId":\n"{synthetic_account}"}}',
               f'{{"accountId":{long_gap}"{synthetic_account}"}}',
