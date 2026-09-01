@@ -303,7 +303,7 @@ jobs:
                   r"\barn:aws(?:-[a-z0-9-]+)?:", flags=re.IGNORECASE
               ),
               "aws-account-label": re.compile(
-                  r"\b(?:aws[\s_-]*)?account(?:[\s_-]*(?:id|number))?\b"
+                  r"\b[A-Za-z0-9_-]*account(?:[\s_-]*(?:id|number))?\b"
                   r"[^0-9\n]{0,16}\d{12}\b",
                   flags=re.IGNORECASE,
               ),
@@ -329,8 +329,15 @@ jobs:
 
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
+              repository_texts = [text]
               for coordinate_match in github_coordinate_pattern.finditer(text):
-                  decoded_coordinate = unquote(coordinate_match.group(0))
+                  decoded_coordinate = coordinate_match.group(0)
+                  for _ in range(3):
+                      next_decoded_coordinate = unquote(decoded_coordinate)
+                      if next_decoded_coordinate == decoded_coordinate:
+                          break
+                      decoded_coordinate = next_decoded_coordinate
+                  repository_texts.append(decoded_coordinate)
                   repository_path = github_coordinate_prefix.sub(
                       "", decoded_coordinate, count=1
                   )
@@ -339,12 +346,15 @@ jobs:
                       for segment in repository_path.split("/")
                   ):
                       matches.append("github dot-segment")
-              for repository_match in organization_repository_pattern.finditer(text):
-                  repository = repository_match.group(1).casefold()
-                  if repository.endswith(".git"):
-                      repository = repository[:-4]
-                  if repository not in allowed_portfolio_references:
-                      matches.append("nonpublic same-owner repository")
+              for repository_text in repository_texts:
+                  for repository_match in organization_repository_pattern.finditer(
+                      repository_text
+                  ):
+                      repository = repository_match.group(1).casefold()
+                      if repository.endswith(".git"):
+                          repository = repository[:-4]
+                      if repository not in allowed_portfolio_references:
+                          matches.append("nonpublic same-owner repository")
               matches.extend(
                   label
                   for label, pattern in generic_cloud_coordinate_patterns.items()
@@ -388,10 +398,14 @@ jobs:
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/../{synthetic_repository}",
               f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
+              "https://github.com/SAABOLImpactVenture/%70rivate-producer",
+              "https://github.com/SAABOLImpactVenture/%2570rivate-producer",
               f"arn:aws:iam::{synthetic_account}:role/example",
               f"arn:aws-iso-b:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
+              f'{{"recipientAccountId": "{synthetic_account}"}}',
+              f'{{"sourceAccount": "{synthetic_account}"}}',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
