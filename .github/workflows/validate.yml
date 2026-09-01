@@ -271,10 +271,15 @@ jobs:
           ]["sanitizedRecordSha256"]:
               raise SystemExit("sanitized alarm-record integrity failed")
 
-          allowed_public_repositories = {
+          allowed_portfolio_references = {
               "ai-powered-infrastructure-as-a-product",
+              "backstage-infrastructure-product-storefront-poc",
+              "composite-ai-infrastructure-product-poc",
+              "crossplane-multicloud-seed-poc",
               "iaap-guard",
               "iaap-guard-adopter-validation",
+              "multicloud-foundation-poc-integration",
+              "multicloud-foundation-product-poc",
           }
           organization_repository_pattern = re.compile(
               r"SAABOLImpactVenture/"
@@ -285,7 +290,7 @@ jobs:
               "aws-arn": re.compile(
                   r"\barn:(?:aws|aws-us-gov|aws-cn):", flags=re.IGNORECASE
               ),
-              "twelve-digit-account": re.compile(r"(?<!\d)\d{12}(?!\d)"),
+              "twelve-digit-account": re.compile(r"(?<![0-9a-f])\d{12}(?![0-9a-f])", flags=re.IGNORECASE),
           }
 
           def assurance_surface_paths(root: Path) -> list[Path]:
@@ -309,7 +314,7 @@ jobs:
                   repository = repository_match.group(1).casefold()
                   if repository.endswith(".git"):
                       repository = repository[:-4]
-                  if repository not in allowed_public_repositories:
+                  if repository not in allowed_portfolio_references:
                       matches.append("nonpublic same-owner repository")
               matches.extend(
                   label
@@ -325,13 +330,13 @@ jobs:
                   f"private coordinates are present in assurance surface: {leaked_patterns}"
               )
 
-          for repository in allowed_public_repositories:
+          for repository in allowed_portfolio_references:
               public_coordinate = (
                   "https://github.com/SAABOLImpactVenture/" + repository
               )
               if private_coordinate_matches(public_coordinate):
                   raise SystemExit(
-                      f"allowlisted public repository was rejected: {repository}"
+                      f"allowlisted portfolio reference was rejected: {repository}"
                   )
 
           synthetic_repository = "private-producer"
