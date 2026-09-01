@@ -342,10 +342,10 @@ jobs:
           )
 
           yaml_node_property_pattern = re.compile(
-              r"^(?:(?:![^\\s]+|&[A-Za-z0-9_-]+)\\s+)+"
+              r"^(?:(?:![^\s]+|&[A-Za-z0-9_-]+)\s+)+"
           )
           yaml_anchor_pattern = re.compile(r"&([A-Za-z0-9_-]+)")
-          yaml_alias_pattern = re.compile(r"^\\*([A-Za-z0-9_-]+)\\b")
+          yaml_alias_pattern = re.compile(r"^\*([A-Za-z0-9_-]+)\b")
 
           def leading_indent(line: str) -> int:
               return len(line) - len(line.lstrip(" "))
