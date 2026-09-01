@@ -327,17 +327,17 @@ jobs:
                   for path in assurance_surface_paths(root)
               )
 
-          account_id_pattern = re.compile(r"(?<!\\d)\\d{12}(?!\\d)")
+          account_id_pattern = re.compile(r"(?<!\d)\d{12}(?!\d)")
           principal_key_pattern = re.compile(
-              r"""["']?Principal["']?\\s*:""", flags=re.IGNORECASE
+              r"""["']?Principal["']?\s*:""", flags=re.IGNORECASE
           )
           aws_key_pattern = re.compile(
-              r"""["']?AWS["']?\\s*:\\s*(.*)$""", flags=re.IGNORECASE
+              r"""["']?AWS["']?\s*:\s*(.*)$""", flags=re.IGNORECASE
           )
           inline_principal_pattern = re.compile(
-              r"""["']?Principal["']?\\s*:\\s*\\{[^{}\\n]*?"""
-              r"""["']?AWS["']?\\s*:\\s*(?:["']?\\d{12}(?!\\d)|"""
-              r"""\\[[^\\]\\n]*(?<!\\d)\\d{12}(?!\\d)[^\\]\\n]*\\])""",
+              r"""["']?Principal["']?\s*:\s*\{[^{}\n]*?"""
+              r"""["']?AWS["']?\s*:\s*(?:["']?\d{12}(?!\d)|"""
+              r"""\[[^\]\n]*(?<!\d)\d{12}(?!\d)[^\]\n]*\])""",
               flags=re.IGNORECASE,
           )
 
@@ -346,7 +346,7 @@ jobs:
 
           def aws_value_has_account(value: str) -> bool:
               value = value.lstrip()
-              if re.match(r"""["']?\\d{12}(?!\\d)""", value):
+              if re.match(r"""["']?\d{12}(?!\d)""", value):
                   return True
               if value.startswith("["):
                   closing_bracket = value.find("]")
