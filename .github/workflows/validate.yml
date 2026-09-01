@@ -364,6 +364,13 @@ jobs:
                   )
               if isinstance(value, list):
                   return any(account_value_present(child) for child in value)
+              if isinstance(value, dict):
+                  return any(
+                      isinstance(key, str)
+                      and key.casefold() in {"id", "ids", "number", "numbers"}
+                      and account_value_present(child)
+                      for key, child in value.items()
+                  )
               return False
 
           def is_account_key(key: object) -> bool:
@@ -396,7 +403,9 @@ jobs:
                       account_id_pattern.search(normalized_value)
                       is not None
                   )
-              if isinstance(node, yaml.nodes.SequenceNode):
+              if isinstance(
+                  node, (yaml.nodes.MappingNode, yaml.nodes.SequenceNode)
+              ):
                   if active is None:
                       active = set()
                   node_identity = id(node)
@@ -404,6 +413,16 @@ jobs:
                       return False
                   active.add(node_identity)
                   try:
+                      if isinstance(node, yaml.nodes.MappingNode):
+                          return any(
+                              isinstance(key_node, yaml.nodes.ScalarNode)
+                              and key_node.value.casefold()
+                              in {"id", "ids", "number", "numbers"}
+                              and yaml_node_account_value_present(
+                                  child_node, active
+                              )
+                              for key_node, child_node in node.value
+                          )
                       return any(
                           yaml_node_account_value_present(child, active)
                           for child in node.value
@@ -519,7 +538,7 @@ jobs:
 
           def yaml_structured_iam_principal_account_present(
               text: str,
-          ) -> bool:
+          ) -> bool | None:
               try:
                   for document in yaml.compose_all(
                       text, Loader=yaml.SafeLoader
@@ -532,7 +551,7 @@ jobs:
                       ):
                           return True
               except yaml.YAMLError:
-                  return False
+                  return None
               return False
 
           def decoded_yaml_scalars(text: str) -> list[str]:
@@ -600,8 +619,11 @@ jobs:
                   and json_iam_principal_account_present(structured_value)
               ):
                   return True
-              if yaml_structured_iam_principal_account_present(text):
-                  return True
+              yaml_iam_match = yaml_structured_iam_principal_account_present(
+                  text
+              )
+              if yaml_iam_match is not None:
+                  return yaml_iam_match
               # Malformed YAML-like documentation still receives a bounded
               # text scan; valid YAML is handled only by the parser above.
               return textual_iam_principal_pattern.search(text) is not None
@@ -821,6 +843,16 @@ jobs:
               raise SystemExit(
                   "node-looking YAML comment was treated as an anchor"
               )
+          unrelated_yaml_principal_metadata = (
+              "Principal: public\n"
+              "metadata:\n"
+              "  AWS: checkRunId "
+              f"{synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_principal_metadata):
+              raise SystemExit(
+                  "unrelated valid YAML Principal and AWS metadata were joined"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -874,6 +906,8 @@ jobs:
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
+              f'{{"account": {{"id": "{synthetic_account}"}}}}',
+              f'account:\n  number: "{synthetic_account}"',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"accountIds": ["{synthetic_account}"]}}',
               f'{{"accountNumbers": ["{synthetic_account}"]}}',
