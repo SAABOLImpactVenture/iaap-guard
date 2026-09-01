@@ -20,16 +20,352 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import hashlib
           import json
+          import re
+          import tempfile
           from pathlib import Path
 
           for path in sorted(Path("schemas").glob("*.json")):
               json.loads(path.read_text(encoding="utf-8"))
 
-          forbidden = ["src", "rules", "tests", "fixtures", "deploy", "scripts", "lambda_function.py", "action.yml"]
-          present = [path for path in forbidden if Path(path).exists()]
+          assurance = json.loads(
+              Path("artifacts/remediation-r1/public-guard-assurance.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          forbidden_implementation = [
+              "src",
+              "rules",
+              "tests",
+              "fixtures",
+              "deploy",
+              "scripts",
+              "lambda_function.py",
+          ]
+          action_manifests = ["action.yml", "action.yaml"]
+
+          def distribution_errors(root: Path) -> list[str]:
+              present = [
+                  path
+                  for path in forbidden_implementation + action_manifests
+                  if (root / path).exists()
+              ]
+              return present
+
+          present = distribution_errors(Path("."))
           if present:
-              raise SystemExit(f"private implementation paths are present: {present}")
+              raise SystemExit(
+                  f"private implementation or retired Action paths are present: {present}"
+              )
+
+          # Prove both supported root manifest spellings fail independently and together.
+          mutation_cases = [("action.yml",), ("action.yaml",), tuple(action_manifests)]
+          for mutation_case in mutation_cases:
+              with tempfile.TemporaryDirectory() as temporary_directory:
+                  root = Path(temporary_directory)
+                  for manifest in mutation_case:
+                      (root / manifest).write_text(
+                          "name: retired-action-mutation\n", encoding="utf-8"
+                      )
+                  detected = set(distribution_errors(root))
+                  if detected != set(mutation_case):
+                      raise SystemExit(
+                          f"retired Action mutation was not rejected: {mutation_case}"
+                      )
+
+          required_boundary_statements = [
+              "These prohibitions are unconditional.",
+              "A publication review cannot override them.",
+              "Customer data and private repository content",
+              "Secrets, credentials, tokens, and private keys",
+              "Internal operational topology",
+              "Secret-manager storage is not repository storage",
+          ]
+          def publication_boundary_errors(text: str) -> list[str]:
+              errors = [
+                  statement
+                  for statement in required_boundary_statements
+                  if statement not in text
+              ]
+              if "unless an explicit publication review" in text:
+                  errors.append("publication-review exception")
+              review_override_lines = [
+                  line.strip()
+                  for line in text.splitlines()
+                  if "publication review" in line.lower()
+                  and "override" in line.lower()
+              ]
+              if review_override_lines != [
+                  "A publication review cannot override them."
+              ]:
+                  errors.append(
+                      f"contradictory publication-review override: {review_override_lines}"
+                  )
+              return errors
+
+          publication_boundary = Path("docs/PUBLICATION-BOUNDARY.md").read_text(
+              encoding="utf-8"
+          )
+          boundary_errors = publication_boundary_errors(publication_boundary)
+          if boundary_errors:
+              raise SystemExit(
+                  f"unconditional publication boundary is incomplete: {boundary_errors}"
+              )
+
+          exception_mutation = (
+              publication_boundary + "\nA publication review may override them.\n"
+          )
+          if not publication_boundary_errors(exception_mutation):
+              raise SystemExit("publication-review exception mutation was not rejected")
+
+          catalog_bytes = Path("planning/catalog.yaml").read_bytes()
+          catalog = catalog_bytes.decode("utf-8")
+          if not catalog.startswith("planningCatalogVersion: iaap-planning/v0.1.0\n"):
+              raise SystemExit("planning catalog version changed or is missing")
+          catalog_sha256 = hashlib.sha256(catalog_bytes).hexdigest()
+          if catalog_sha256 != "e8e21f08c78b071b8300c25ccadd661396c77c7ae6bce048ff12b9255cba7a1d":
+              raise SystemExit("frozen planning catalog bytes changed without a version")
+
+          contract_freeze = Path("docs/V1-CONTRACT-FREEZE.md").read_text(
+              encoding="utf-8"
+          )
+          if "| Planning catalog | `iaap-planning/v0.1.0` |" not in contract_freeze:
+              raise SystemExit("planning catalog is not explicitly frozen")
+
+          if Path("VERSION").read_text(encoding="utf-8").strip() != "1.0.1":
+              raise SystemExit("public Guard maintenance version is not 1.0.1")
+          if "## 1.0.1 — maintenance candidate" not in Path("CHANGELOG.md").read_text(
+              encoding="utf-8"
+          ):
+              raise SystemExit("1.0.1 maintenance candidate is missing from changelog")
+
+          if assurance["maintenanceCandidateVersion"] != "1.0.1":
+              raise SystemExit("assurance record does not match maintenance version")
+          if assurance["contracts"]["planningCatalog"] != "iaap-planning/v0.1.0":
+              raise SystemExit("assurance record does not match planning catalog")
+          if assurance["contracts"]["planningCatalogSha256"] != catalog_sha256:
+              raise SystemExit("assurance record does not bind the frozen catalog bytes")
+          if any(assurance["publicationBoundary"].values()):
+              raise SystemExit("assurance record reports prohibited public material")
+
+          claims = assurance["claims"]
+          required_claim_states = {
+              "negativeResultPublication": "VERIFIED",
+              "deploymentLogRetention": "VERIFIED_WITH_SANITIZATION",
+              "hostedApplicationLogging": "NOT_ESTABLISHED",
+              "alarmStatus": "POINT_IN_TIME_ONLY",
+              "concurrencyAndEndurance": "NOT_ESTABLISHED",
+              "rollback": "PROCEDURE_AND_TARGET_RETAINED",
+              "adopterValidation": "INSTALLATION_MECHANICS_VERIFIED",
+              "productionQualification": "NOT_ESTABLISHED",
+          }
+          observed_claim_states = {
+              claim: claims[claim]["status"] for claim in required_claim_states
+          }
+          if observed_claim_states != required_claim_states:
+              raise SystemExit(f"assurance claim states changed: {observed_claim_states}")
+
+          required_boolean_values = {
+              "publicationBoundary.customerDataPublished": False,
+              "publicationBoundary.privateRepositoryContentPublished": False,
+              "publicationBoundary.credentialsOrSecretsPublished": False,
+              "publicationBoundary.privateProducerRevisionPublished": False,
+              "publicationBoundary.workflowOrJobIdentifiersPublished": False,
+              "publicationBoundary.cloudResourceCoordinatesPublished": False,
+              "publicationBoundary.rawOperationalLogsPublished": False,
+              "claims.deploymentLogRetention.rawLogsPublished": False,
+              "claims.deploymentLogRetention.customerLoggingGuarantee": False,
+              "claims.hostedApplicationLogging.requestLogCompletenessValidated": False,
+              "claims.hostedApplicationLogging.redactionValidated": False,
+              "claims.hostedApplicationLogging.retentionValidated": False,
+              "claims.hostedApplicationLogging.incidentUseExercised": False,
+              "claims.alarmStatus.alertDeliveryExercised": False,
+              "claims.alarmStatus.alertResponseExercised": False,
+              "claims.concurrencyAndEndurance.representativeLoadTest": False,
+              "claims.concurrencyAndEndurance.throttlingRecoveryTest": False,
+              "claims.concurrencyAndEndurance.enduranceTest": False,
+              "claims.rollback.knownGoodTargetRetained": True,
+              "claims.rollback.procedureRetained": True,
+              "claims.rollback.rollbackExecuted": False,
+              "claims.rollback.rollbackCompletionEstablished": False,
+              "claims.adopterValidation.sameOrganization": True,
+              "claims.adopterValidation.independentAdoptionEstablished": False,
+              "claims.adopterValidation.customerValueEstablished": False,
+              "claims.adopterValidation.productionUseEstablished": False,
+              "claims.productionQualification.slaPublished": False,
+              "claims.productionQualification.controlledPilotAuthorized": False,
+              "claims.productionQualification.productionReadinessClaimed": False,
+              "authority.repositoryWriteAuthorityAdded": False,
+              "authority.infrastructureAuthorityAdded": False,
+              "authority.authorizationAuthorityAdded": False,
+              "authority.pilotAuthorized": False,
+          }
+
+          def collect_boolean_values(
+              value: object, prefix: tuple[str, ...] = ()
+          ) -> dict[str, bool]:
+              if isinstance(value, bool):
+                  return {".".join(prefix): value}
+              if isinstance(value, dict):
+                  observed = {}
+                  for key, child in value.items():
+                      observed.update(collect_boolean_values(child, (*prefix, key)))
+                  return observed
+              if isinstance(value, list):
+                  observed = {}
+                  for index, child in enumerate(value):
+                      observed.update(
+                          collect_boolean_values(child, (*prefix, str(index)))
+                      )
+                  return observed
+              return {}
+
+          def boolean_contract_errors(record: dict) -> list[str]:
+              observed = collect_boolean_values(record)
+              return sorted(
+                  path
+                  for path in set(observed) | set(required_boolean_values)
+                  if observed.get(path) != required_boolean_values.get(path)
+              )
+
+          boolean_errors = boolean_contract_errors(assurance)
+          if boolean_errors:
+              raise SystemExit(
+                  f"public Guard boolean assurance contract changed: {boolean_errors}"
+              )
+
+          for mutation_path, expected_value in required_boolean_values.items():
+              mutated_assurance = json.loads(json.dumps(assurance))
+              target = mutated_assurance
+              keys = mutation_path.split(".")
+              for key in keys[:-1]:
+                  target = target[key]
+              target[keys[-1]] = not expected_value
+              if not boolean_contract_errors(mutated_assurance):
+                  raise SystemExit(
+                      f"boolean assurance mutation was not rejected: {mutation_path}"
+                  )
+
+          log_digests = claims["deploymentLogRetention"]["logSha256"]
+          canonical_log_digests = json.dumps(
+              log_digests, sort_keys=True, separators=(",", ":")
+          ).encode("utf-8")
+          if hashlib.sha256(canonical_log_digests).hexdigest() != claims[
+              "deploymentLogRetention"
+          ]["canonicalDigestSetSha256"]:
+              raise SystemExit("deployment log digest-set integrity failed")
+
+          alarm_record = {
+              "configuredAlarms": claims["alarmStatus"]["configuredAlarms"],
+              "observedAt": claims["alarmStatus"]["observedAt"],
+              "scope": "point-in-time status observation; no alert-delivery exercise",
+              "states": claims["alarmStatus"]["states"],
+          }
+          canonical_alarm_record = json.dumps(
+              alarm_record, sort_keys=True, separators=(",", ":")
+          ).encode("utf-8")
+          if hashlib.sha256(canonical_alarm_record).hexdigest() != claims[
+              "alarmStatus"
+          ]["sanitizedRecordSha256"]:
+              raise SystemExit("sanitized alarm-record integrity failed")
+
+          private_coordinate_patterns = [
+              r"arn:aws",
+              r"SAABOLImpactVenture/iaap-guard-core",
+              r"\b070096877875\b",
+          ]
+
+          def assurance_surface_paths(root: Path) -> list[Path]:
+              return sorted(
+                  path
+                  for path in root.rglob("*")
+                  if path.is_file()
+                  and path.suffix.lower() in {".md", ".json", ".txt"}
+                  and ".git" not in path.parts
+              )
+
+          def assurance_surface_text(root: Path) -> str:
+              return "\n".join(
+                  path.read_text(encoding="utf-8")
+                  for path in assurance_surface_paths(root)
+              )
+
+          def private_coordinate_matches(text: str) -> list[str]:
+              return [
+                  pattern
+                  for pattern in private_coordinate_patterns
+                  if re.search(pattern, text, flags=re.IGNORECASE)
+              ]
+
+          public_assurance_text = assurance_surface_text(Path("."))
+          leaked_patterns = private_coordinate_matches(public_assurance_text)
+          if leaked_patterns:
+              raise SystemExit(
+                  f"private coordinates are present in assurance surface: {leaked_patterns}"
+              )
+
+          private_link_mutations = [
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/commit/deadbeef",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/blob/deadbeef/file",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/tree/deadbeef",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/actions/runs/1",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
+              "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
+              "https://github.com/saabolimpactventure/IAAP-GUARD-CORE/blob/deadbeef/file",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core.git",
+              "git@github.com:SAABOLImpactVenture/iaap-guard-core.git",
+              "ssh://git@github.com/SAABOLImpactVenture/iaap-guard-core.git",
+              "[producer](https://github.com/SAABOLImpactVenture/iaap-guard-core)",
+              "`git@github.com:SAABOLImpactVenture/iaap-guard-core.git`",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core,",
+              "The producer is https://github.com/SAABOLImpactVenture/iaap-guard-core.",
+          ]
+          for mutation in private_link_mutations:
+              if not private_coordinate_matches(mutation):
+                  raise SystemExit(
+                      f"private repository coordinate mutation was not rejected: {mutation}"
+                  )
+              with tempfile.TemporaryDirectory() as temporary_directory:
+                  root = Path(temporary_directory)
+                  for relative_path in (
+                      "docs/PHASE-16-VALIDATION.md",
+                      "docs/PRIVATE-EVIDENCE.MD",
+                      "artifacts/private-evidence.JSON",
+                      "artifacts/phase-14/PRIVATE-EVIDENCE.TXT",
+                  ):
+                      assurance_document = root / relative_path
+                      assurance_document.parent.mkdir(parents=True, exist_ok=True)
+                      assurance_document.write_text(mutation, encoding="utf-8")
+                  if len(assurance_surface_paths(root)) != 4:
+                      raise SystemExit("case-variant assurance surfaces were not selected")
+                  if not private_coordinate_matches(assurance_surface_text(root)):
+                      raise SystemExit(
+                          "private coordinate outside the evidence ledger was not rejected: "
+                          f"{mutation}"
+                      )
+
+          link_pattern = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
+          broken_local_links = []
+          for markdown in sorted(Path(".").rglob("*.md")):
+              if ".git" in markdown.parts:
+                  continue
+              for target in link_pattern.findall(
+                  markdown.read_text(encoding="utf-8")
+              ):
+                  if (
+                      "://" in target
+                      or target.startswith("#")
+                      or target.startswith("mailto:")
+                  ):
+                      continue
+                  local_target = target.split("#", 1)[0]
+                  if local_target and not (markdown.parent / local_target).exists():
+                      broken_local_links.append((str(markdown), target))
+          if broken_local_links:
+              raise SystemExit(f"broken local Markdown links: {broken_local_links}")
 
           print("public contracts and distribution boundary verified")
           PY
@@ -48,4 +384,5 @@ jobs:
           grep -Fq "Composite Action retired" README.md
           grep -Fq "https://github.com/apps/iaap-guard" README.md
           test ! -e action.yml
+          test ! -e action.yaml
           ! grep -Rq "PYTHONPATH=.*src\|scripts/github_action.py" README.md

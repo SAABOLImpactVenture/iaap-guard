@@ -15,18 +15,31 @@ Public Guard material may include:
 
 ## Keep private
 
-Do not newly publish implementation or operational material from `iaap-guard-core` unless an explicit publication review determines it is necessary. This includes:
+Private implementation may be represented publicly only by a deliberately published interface, a sanitized assurance result, or other minimum-necessary material that passes publication review. Publication review does not move private source or operational evidence into the public surface by default. Material kept private includes:
 
 - evaluation-engine, rule, scoring, materiality, and Evidence Continuity implementation beyond approved public contracts;
 - internal fixtures, mutation cases, regression tests, unreleased evaluation methods, and private heuristics;
-- GitHub App token-exchange/runtime implementation and deployment templates;
-- live physical resource names, IAM-role/policy internals, private repository revisions, workflow/job identifiers, secret-reference topology, or raw operational evidence when a sanitized result is sufficient;
-- unreleased pricing, licensing, patent, trademark, or commercialization analysis; and
-- customer data, private repository content, secrets, credentials, or nonpublic telemetry.
+- GitHub App token-exchange/runtime implementation and deployment templates; and
+- unreleased pricing, licensing, patent, trademark, or commercialization analysis.
+
+## Never publish
+
+These prohibitions are unconditional.
+
+A publication review cannot override them.
+
+- Customer data and private repository content, including snippets, file contents, webhook payloads, archives, or derived content that could reconstruct the private source.
+- Secrets, credentials, tokens, and private keys, including their values, recoverable encodings, or material that enables their use.
+- Internal operational topology, including live physical resource names, private repository revisions, workflow or job identifiers, IAM-role or policy internals, secret-reference graphs, and raw operational evidence when a sanitized result or digest is sufficient.
+- Nonpublic telemetry that identifies a customer, private repository, credential path, or internal deployment topology.
+
+Secret-manager storage is not repository storage. Public guidance may state that a deployment keeps secrets in an operator-controlled secret manager rather than repository content, but it must not publish secret values, live secret identifiers, reference topology, rotation material, or access paths.
 
 ## Evidence publication rule
 
 Public evidence should substantiate the narrow claim with the minimum implementation detail necessary. Prefer sanitized results, immutable public revisions, public contract versions, bounded acceptance outcomes, and evidence digests over raw infrastructure output or private implementation coordinates.
+
+The current claim-to-evidence ledger is [Public Guard Assurance Evidence](ASSURANCE-EVIDENCE.md). It records both verified outcomes and what remains unestablished so a point-in-time observation is not promoted into a production-readiness claim.
 
 Historical public validation material is not made secret by this policy. Do not rewrite Git history solely to create the appearance that a prior disclosure did not occur. Future assurance evidence should follow this boundary.
 

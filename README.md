@@ -26,7 +26,7 @@ For the minimum trusted cloud-foundation starting point, readiness gates, respon
 
 The former public composite Action is retired. New and current integrations should use the hosted GitHub App.
 
-Historical commits and immutable tags remain available for users already pinned to them, but they are not the supported delivery path and do not receive current product or security updates. The current `main` branch no longer contains an Action manifest, so workflows must migrate to the hosted App instead of using `SAABOLImpactVenture/iaap-guard@main`.
+Historical commits and immutable tags remain available for users already pinned to them, but they are not the supported delivery path and do not receive current product or security updates. The current `main` branch contains neither `action.yml` nor `action.yaml`, so workflows must migrate to the hosted App instead of using `SAABOLImpactVenture/iaap-guard@main`.
 
 ## Public repository scope
 
@@ -62,6 +62,8 @@ Useful product evidence centers developer outcomes: time to provision, product h
 - [Live multi-repository federation acceptance](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json)
 - [Live PR-base Evidence Continuity acceptance](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json)
 - [Private-runtime cutover acceptance PR](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after PASS 100 / SUPPORTED Check Run `95901157382`
+- [Current WARNING and FAIL publication probe](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after neutral Check Run `99733468182` and failure Check Run `99733893114`
+- [Public claim-to-evidence ledger](docs/ASSURANCE-EVIDENCE.md), including explicit alarm, logging, concurrency, rollback, and adopter-validation limits
 
 ## Authority boundary
 

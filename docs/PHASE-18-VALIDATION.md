@@ -6,10 +6,12 @@
 
 ## Release candidate
 
-Version `1.0.0` is the first supported V1 release. It packages the deterministic core,
-versioned rules and schemas, CLI, GitHub Action, public GitHub App adapter, adoption
-preflight, evidence continuity, product federation, and advisory planning behavior
-already proven in Phases 8–17.
+Version `1.0.0` was the first bounded V1 release. At issuance it included the
+deterministic core, versioned rules and schemas, CLI, composite GitHub Action, public
+GitHub App adapter, adoption preflight, evidence continuity, product federation, and
+advisory planning behavior already proven in Phases 8–17. The public CLI and composite
+Action were subsequently retired; the hosted GitHub App is the only supported current
+distribution path.
 
 The release adds no new rule semantics, score authority, GitHub App permission,
 infrastructure authority, or product scope.
@@ -34,10 +36,11 @@ are published in [`SUPPORT.md`](SUPPORT.md) and
 
 ## Release mechanics
 
-The protected release pull request carries the `1.0.0` version and completion
+The protected release pull request carried the `1.0.0` version and completion
 declaration through deterministic validation, dogfood, dependency review, CodeQL, and
-the repository's branch policy. Tag `v1.0.0` is created from the resulting merge commit
-and the GitHub release links these policies and retained evidence.
+the repository's branch policy. Tag `v1.0.0` identifies the resulting historical release
+commit. Current maintenance must not restore either root Action manifest or describe the
+historical Action as a supported path.
 
 ## Completion declaration
 
