@@ -208,9 +208,10 @@ jobs:
           def assurance_surface_paths(root: Path) -> list[Path]:
               return sorted(
                   path
-                  for suffix in ("*.md", "*.json")
-                  for path in root.rglob(suffix)
-                  if ".git" not in path.parts
+                  for path in root.rglob("*")
+                  if path.is_file()
+                  and path.suffix.lower() in {".md", ".json"}
+                  and ".git" not in path.parts
               )
 
           def assurance_surface_text(root: Path) -> str:
@@ -249,9 +250,16 @@ jobs:
                   )
               with tempfile.TemporaryDirectory() as temporary_directory:
                   root = Path(temporary_directory)
-                  phase_document = root / "docs/PHASE-16-VALIDATION.md"
-                  phase_document.parent.mkdir(parents=True)
-                  phase_document.write_text(mutation, encoding="utf-8")
+                  for relative_path in (
+                      "docs/PHASE-16-VALIDATION.md",
+                      "docs/PRIVATE-EVIDENCE.MD",
+                      "artifacts/private-evidence.JSON",
+                  ):
+                      assurance_document = root / relative_path
+                      assurance_document.parent.mkdir(parents=True, exist_ok=True)
+                      assurance_document.write_text(mutation, encoding="utf-8")
+                  if len(assurance_surface_paths(root)) != 3:
+                      raise SystemExit("case-variant assurance surfaces were not selected")
                   if not private_coordinate_matches(assurance_surface_text(root)):
                       raise SystemExit(
                           "private coordinate outside the evidence ledger was not rejected: "
