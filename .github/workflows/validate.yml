@@ -420,16 +420,25 @@ jobs:
                   ):
                       return True
                   key_indent = leading_indent(key_line)
+                  sequence_indent = None
                   for value_line in lines[key_index + 1 :]:
                       value_stripped = value_line.strip()
                       if not value_stripped or value_stripped.startswith("#"):
                           continue
                       value_indent = leading_indent(value_line)
-                      if value_indent < key_indent:
-                          break
-                      if (
-                          value_indent == key_indent
-                          and not value_stripped.startswith("-")
+                      if sequence_indent is None:
+                          if (
+                              value_indent < key_indent
+                              or not value_stripped.startswith("-")
+                          ):
+                              break
+                          sequence_indent = value_indent
+                      elif (
+                          value_indent < sequence_indent
+                          or (
+                              value_indent == sequence_indent
+                              and not value_stripped.startswith("-")
+                          )
                       ):
                           break
                       if account_id_pattern.search(
@@ -644,6 +653,15 @@ jobs:
           if private_coordinate_matches(unrelated_identifier_record):
               raise SystemExit(
                   "unrelated 12-digit public identifier was rejected as an account"
+              )
+          unrelated_yaml_identifier = (
+              "account:\n"
+              "  label: public metadata\n"
+              f"  checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_identifier):
+              raise SystemExit(
+                  "nested unrelated YAML identifier was rejected as an account"
               )
 
           synthetic_repository = "private-producer"
