@@ -285,7 +285,7 @@ jobs:
           }
           organization_repository_pattern = re.compile(
               r"SAABOLImpactVenture/"
-              r"([A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9_-])?)",
+              r"([A-Za-z0-9._-]*[A-Za-z0-9_-])",
               flags=re.IGNORECASE,
           )
           github_coordinate_pattern = re.compile(
@@ -376,6 +376,28 @@ jobs:
           def is_yaml_sequence_entry(value: str) -> bool:
               return re.match(r"^-(?:[ \\t]|$)", value) is not None
 
+          def yaml_value_without_comment(value: str) -> str:
+              single_quoted = False
+              double_quoted = False
+              escaped = False
+              for index, character in enumerate(value):
+                  if double_quoted and character == "\\" and not escaped:
+                      escaped = True
+                      continue
+                  if character == '"' and not single_quoted and not escaped:
+                      double_quoted = not double_quoted
+                  elif character == "'" and not double_quoted:
+                      single_quoted = not single_quoted
+                  elif (
+                      character == "#"
+                      and not single_quoted
+                      and not double_quoted
+                      and (index == 0 or value[index - 1].isspace())
+                  ):
+                      return value[:index].rstrip()
+                  escaped = False
+              return value.strip()
+
           def yaml_account_anchors(text: str) -> set[str]:
               lines = text.splitlines()
               account_anchors = set()
@@ -384,7 +406,9 @@ jobs:
                   if not anchor_match:
                       continue
                   anchor_name = anchor_match.group(1)
-                  anchor_value = anchor_line[anchor_match.end() :].strip()
+                  anchor_value = yaml_value_without_comment(
+                      anchor_line[anchor_match.end() :]
+                  )
                   if account_id_pattern.search(anchor_value):
                       account_anchors.add(anchor_name)
                       continue
@@ -874,6 +898,15 @@ jobs:
               raise SystemExit(
                   "YAML account alias absorbed unrelated anchored metadata"
               )
+          unrelated_yaml_anchor_comment = (
+              "safe: &public harmless # checkRunId: "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_yaml_anchor_comment):
+              raise SystemExit(
+                  "YAML account alias absorbed an inline anchor comment"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -890,6 +923,7 @@ jobs:
               f"https://api.github.com/repos/SAABOLImpactVenture/{synthetic_repository}/contents/file",
               f"https://github.com/saabolimpactventure/{synthetic_repository.upper()}/blob/deadbeef/file",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}",
+              f"{github_root}.{synthetic_repository}",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}.git",
               f"git@github.com:SAABOLImpactVenture/{synthetic_repository}.git",
               f"ssh://git@github.com/SAABOLImpactVenture/{synthetic_repository}.git",
