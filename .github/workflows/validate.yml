@@ -388,7 +388,7 @@ jobs:
               single_quoted = False
               double_quoted = False
               escaped = False
-              for index, character in enumerate(value):
+              for index, character in enumerate(scalar_value):
                   if (
                       quote_style == '"'
                       and double_quoted
@@ -409,11 +409,14 @@ jobs:
                       character == "#"
                       and not single_quoted
                       and not double_quoted
-                      and (index == 0 or value[index - 1].isspace())
+                      and (
+                          index == 0
+                          or scalar_value[index - 1].isspace()
+                      )
                   ):
-                      return value[:index].rstrip()
+                      return scalar_value[:index].rstrip()
                   escaped = False
-              return value.strip()
+              return scalar_value.strip()
 
           def yaml_account_anchors(text: str) -> set[str]:
               lines = text.splitlines()
@@ -932,6 +935,15 @@ jobs:
           if private_coordinate_matches(unrelated_plain_scalar_quote):
               raise SystemExit(
                   "plain YAML scalar quote suppressed an inline comment"
+              )
+          unrelated_tagged_scalar_quote = (
+              "safe: &public !foo'bar 'harmless' # checkRunId: "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_tagged_scalar_quote):
+              raise SystemExit(
+                  "YAML tag quote suppressed an inline scalar comment"
               )
 
           synthetic_repository = "private-producer"
