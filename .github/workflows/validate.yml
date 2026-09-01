@@ -441,10 +441,24 @@ jobs:
                           )
                       ):
                           break
-                      if account_id_pattern.search(
-                          value_line
-                      ) or aws_value_has_account(
-                          value_stripped.lstrip("-").lstrip(),
+                      if value_indent > sequence_indent:
+                          continue
+                      sequence_value = value_stripped.lstrip("-").lstrip()
+                      sequence_mapping = account_mapping_pattern.match(
+                          sequence_value
+                      )
+                      if sequence_mapping:
+                          if (
+                              is_account_key(sequence_mapping.group("key"))
+                              and aws_value_has_account(
+                                  sequence_mapping.group("value"),
+                                  account_anchors,
+                              )
+                          ):
+                              return True
+                          continue
+                      if aws_value_has_account(
+                          sequence_value,
                           account_anchors,
                       ):
                           return True
@@ -571,24 +585,56 @@ jobs:
                       return value
                   value = decoded_value
 
+          def decoded_json_strings(text: str) -> list[str]:
+              try:
+                  structured_value = json.loads(text)
+              except json.JSONDecodeError:
+                  return []
+
+              strings = []
+
+              def collect_strings(value: object) -> None:
+                  if isinstance(value, str):
+                      strings.append(
+                          decode_to_fixed_point(value).replace("\\", "/")
+                      )
+                  elif isinstance(value, dict):
+                      for key, child in value.items():
+                          collect_strings(key)
+                          collect_strings(child)
+                  elif isinstance(value, list):
+                      for child in value:
+                          collect_strings(child)
+
+              collect_strings(structured_value)
+              return strings
+
           def private_coordinate_matches(text: str) -> list[str]:
               matches = []
               normalized_text = text.replace("\\", "/")
               decoded_text = decode_to_fixed_point(normalized_text).replace("\\", "/")
-              repository_texts = [normalized_text, decoded_text]
-              for coordinate_match in github_coordinate_pattern.finditer(decoded_text):
-                  decoded_coordinate = decode_to_fixed_point(
-                      coordinate_match.group(0)
-                  ).replace("\\", "/")
-                  repository_texts.append(decoded_coordinate)
-                  repository_path = github_coordinate_prefix.sub(
-                      "", decoded_coordinate, count=1
-                  )
-                  if any(
-                      segment in {".", ".."}
-                      for segment in repository_path.split("/")
+              repository_texts = [
+                  normalized_text,
+                  decoded_text,
+                  *decoded_json_strings(text),
+                  *decoded_json_strings(decoded_text),
+              ]
+              for coordinate_text in tuple(repository_texts):
+                  for coordinate_match in github_coordinate_pattern.finditer(
+                      coordinate_text
                   ):
-                      matches.append("github dot-segment")
+                      decoded_coordinate = decode_to_fixed_point(
+                          coordinate_match.group(0)
+                      ).replace("\\", "/")
+                      repository_texts.append(decoded_coordinate)
+                      repository_path = github_coordinate_prefix.sub(
+                          "", decoded_coordinate, count=1
+                      )
+                      if any(
+                          segment in {".", ".."}
+                          for segment in repository_path.split("/")
+                      ):
+                          matches.append("github dot-segment")
               for repository_text in repository_texts:
                   for repository_match in organization_repository_pattern.finditer(
                       repository_text
@@ -601,7 +647,7 @@ jobs:
               matches.extend(
                   label
                   for label, pattern in generic_cloud_coordinate_patterns.items()
-                  if pattern.search(decoded_text)
+                  if any(pattern.search(value) for value in repository_texts)
               )
               if (
                   contextual_account_pattern.search(decoded_text)
@@ -663,6 +709,15 @@ jobs:
               raise SystemExit(
                   "nested unrelated YAML identifier was rejected as an account"
               )
+          unrelated_yaml_sequence_mapping = (
+              "account:\n"
+              "  - label: public metadata\n"
+              f"    checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_sequence_mapping):
+              raise SystemExit(
+                  "unrelated YAML sequence metadata was rejected as an account"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -701,6 +756,11 @@ jobs:
               + github_root
               + "&#112;rivate-producer"
               + '">producer</a>',
+              '{"url":"'
+              + github_root
+              + chr(92)
+              + "u0070"
+              + 'rivate-producer"}',
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
               f"{'arn'}%3Aaws%3Aiam%3A%3A{synthetic_account}%3Arole/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
