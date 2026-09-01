@@ -368,10 +368,10 @@ jobs:
               r"^[|>][1-9+-]{0,2}(?:\s+#.*)?$"
           )
           yaml_anchor_pattern = re.compile(
-              r"""^\s*(?:"""
-              r"""(?:-\s+)?(?:[^:#"']+|["'][^"']+["']):\s+|"""
-              r"""-\s+|:\s+"""
-              r""")?(?:![^\s]+\s+)*"""
+              r"""^\s*(?:-\s+)?"""
+              r"""(?:(?:[^#\s:'"\[\]{},][^:#\n]*?|"""
+              r"""'(?:[^']|'')*'|"(?:\\.|[^"\\])*")\s*:\s+|:\s+)?"""
+              r"""(?:![^\s]+\s+)*"""
               r"""&(?P<name>[^\s\[\]{},]+)(?=\s|$)"""
           )
           yaml_alias_pattern = re.compile(r"^\*([^\s\[\]{},]+)")
@@ -488,6 +488,82 @@ jobs:
                   index = hexadecimal_end
               return "".join(decoded)
 
+          yaml_double_escape_values = {
+              "0": "\0",
+              "a": "\a",
+              "b": "\b",
+              "t": "\t",
+              "\t": "\t",
+              "n": "\n",
+              "v": "\v",
+              "f": "\f",
+              "r": "\r",
+              "e": "\x1b",
+              " ": " ",
+              '"': '"',
+              "/": "/",
+              "\\": "\\",
+              "N": "\x85",
+              "_": "\xa0",
+              "L": "\u2028",
+              "P": "\u2029",
+          }
+
+          def decode_yaml_double_quoted(scalar_value: str) -> str:
+              if (
+                  len(scalar_value) < 2
+                  or not scalar_value.startswith('"')
+                  or not scalar_value.endswith('"')
+              ):
+                  return scalar_value
+              decoded_parts = []
+              content = scalar_value[1:-1]
+              index = 0
+              while index < len(content):
+                  character = content[index]
+                  if character != "\\":
+                      decoded_parts.append(character)
+                      index += 1
+                      continue
+                  if index + 1 >= len(content):
+                      return scalar_value
+                  escape = content[index + 1]
+                  if escape in yaml_double_escape_values:
+                      decoded_parts.append(yaml_double_escape_values[escape])
+                      index += 2
+                      continue
+                  escape_lengths = {"x": 2, "u": 4, "U": 8}
+                  if escape in escape_lengths:
+                      digit_count = escape_lengths[escape]
+                      digits = content[index + 2 : index + 2 + digit_count]
+                      if (
+                          len(digits) != digit_count
+                          or re.fullmatch(r"[0-9A-Fa-f]+", digits) is None
+                      ):
+                          return scalar_value
+                      try:
+                          decoded_parts.append(chr(int(digits, 16)))
+                      except ValueError:
+                          return scalar_value
+                      index += 2 + digit_count
+                      continue
+                  if escape in {"\n", "\r"}:
+                      index += 2
+                      if (
+                          escape == "\r"
+                          and index < len(content)
+                          and content[index] == "\n"
+                      ):
+                          index += 1
+                      while (
+                          index < len(content)
+                          and content[index] in {" ", "\t"}
+                      ):
+                          index += 1
+                      continue
+                  return scalar_value
+              return "".join(decoded_parts)
+
           def decoded_yaml_scalar(value: str) -> str:
               scalar_value = yaml_value_without_comment(value)
               scalar_value = yaml_node_property_pattern.sub(
@@ -508,30 +584,26 @@ jobs:
               return scalar_value
 
           def yaml_closing_quote_index(
-              value: str, quote_style: str, start: int = 1
-          ) -> int:
+              value: str, quote_style: str, start: int
+          ) -> int | None:
               index = start
               while index < len(value):
-                  if value[index] != quote_style:
+                  character = value[index]
+                  if quote_style == '"' and character == "\\":
+                      index += 2
+                      continue
+                  if character != quote_style:
                       index += 1
                       continue
-                  if quote_style == "'":
-                      if (
-                          index + 1 < len(value)
-                          and value[index + 1] == "'"
-                      ):
-                          index += 2
-                          continue
-                      return index
-                  backslash_count = 0
-                  previous = index - 1
-                  while previous >= 0 and value[previous] == "\\":
-                      backslash_count += 1
-                      previous -= 1
-                  if backslash_count % 2 == 0:
-                      return index
-                  index += 1
-              return -1
+                  if (
+                      quote_style == "'"
+                      and index + 1 < len(value)
+                      and value[index + 1] == "'"
+                  ):
+                      index += 2
+                      continue
+                  return index
+              return None
 
           def yaml_multiline_quoted_has_account(
               lines: list[str],
@@ -545,7 +617,9 @@ jobs:
               if not scalar_value.startswith(('"', "'")):
                   return False
               quote_style = scalar_value[0]
-              if yaml_closing_quote_index(scalar_value, quote_style) != -1:
+              if yaml_closing_quote_index(
+                  scalar_value, quote_style, 1
+              ) is not None:
                   return False
               scalar_parts = [scalar_value[1:]]
               for continuation_line in lines[value_index + 1 :]:
@@ -555,9 +629,9 @@ jobs:
                       break
                   continuation = continuation_line.strip()
                   closing_index = yaml_closing_quote_index(
-                      continuation, quote_style, start=0
+                      continuation, quote_style, 0
                   )
-                  if closing_index == -1:
+                  if closing_index is None:
                       scalar_parts.append(continuation)
                       continue
                   scalar_parts.append(continuation[:closing_index])
@@ -577,7 +651,7 @@ jobs:
               lines = text.splitlines()
               account_anchors = set()
               for anchor_index, anchor_line in enumerate(lines):
-                  anchor_match = yaml_anchor_pattern.search(anchor_line)
+                  anchor_match = yaml_anchor_pattern.match(anchor_line)
                   if not anchor_match:
                       continue
                   anchor_name = anchor_match.group("name")
@@ -1119,7 +1193,7 @@ jobs:
               )
           unrelated_comment_anchor = (
               "safe: &public harmless\n"
-              "note: unrelated # &public checkRunId: "
+              "note: unrelated # note: &public "
               f"{synthetic_public_identifier}\n"
               "account: *public"
           )
@@ -1198,6 +1272,15 @@ jobs:
               'accountId: "'
               + (chr(92) + "u0031") * 12
               + '"',
+              'accountId: "'
+              + (chr(92) + "x31") * 12
+              + '"',
+              'accountId: "harmless '
+              + chr(92)
+              + f'"\n  {synthetic_account}"',
+              "accountId: 'harmless ''\n  "
+              + synthetic_account
+              + "'",
               'accountId: "'
               + (chr(92) + "x31") * 12
               + '"',
