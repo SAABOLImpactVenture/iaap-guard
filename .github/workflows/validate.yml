@@ -621,9 +621,15 @@ jobs:
                       assurance_document = root / relative_path
                       assurance_document.parent.mkdir(parents=True, exist_ok=True)
                       assurance_document.write_text(mutation, encoding="utf-8")
-                  if len(assurance_surface_paths(root)) != 4:
+                  mutation_paths = assurance_surface_paths(root)
+                  if len(mutation_paths) != 4:
                       raise SystemExit("case-variant assurance surfaces were not selected")
-                  if not private_coordinate_matches(assurance_surface_text(root)):
+                  if any(
+                      not private_coordinate_matches(
+                          path.read_text(encoding="utf-8")
+                      )
+                      for path in mutation_paths
+                  ):
                       raise SystemExit(
                           "private coordinate outside the evidence ledger was not rejected: "
                           f"{mutation}"
