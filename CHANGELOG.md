@@ -6,7 +6,7 @@
   identifier from the public validator;
 - reject nonpublic same-organization repository references through an explicit portfolio-reference
   allowlist instead of naming the protected producer;
-- reject AWS ARNs and 12-digit cloud-account identifiers generically; and
+- reject AWS ARNs across partitions plus context-labeled and ECR account identifiers; and
 - prove the boundary with synthetic root, clone, path, case, punctuation, Markdown,
   JSON, and text mutations.
 
