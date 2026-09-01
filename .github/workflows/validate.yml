@@ -91,6 +91,18 @@ jobs:
               ]
               if "unless an explicit publication review" in text:
                   errors.append("publication-review exception")
+              review_override_lines = [
+                  line.strip()
+                  for line in text.splitlines()
+                  if "publication review" in line.lower()
+                  and "override" in line.lower()
+              ]
+              if review_override_lines != [
+                  "A publication review cannot override them."
+              ]:
+                  errors.append(
+                      f"contradictory publication-review override: {review_override_lines}"
+                  )
               return errors
 
           publication_boundary = Path("docs/PUBLICATION-BOUNDARY.md").read_text(
@@ -102,9 +114,8 @@ jobs:
                   f"unconditional publication boundary is incomplete: {boundary_errors}"
               )
 
-          exception_mutation = publication_boundary.replace(
-              "A publication review cannot override them.",
-              "A publication review may override them.",
+          exception_mutation = (
+              publication_boundary + "\nA publication review may override them.\n"
           )
           if not publication_boundary_errors(exception_mutation):
               raise SystemExit("publication-review exception mutation was not rejected")
@@ -195,18 +206,37 @@ jobs:
           )
           private_coordinate_patterns = [
               r"arn:aws",
-              r"iaap-guard-core/(?:commit|actions|pull)",
+              r"(?:github\.com/|api\.github\.com/repos/)?"
+              r"SAABOLImpactVenture/iaap-guard-core/",
               r"\b070096877875\b",
           ]
-          leaked_patterns = [
-              pattern
-              for pattern in private_coordinate_patterns
-              if re.search(pattern, public_assurance_text)
-          ]
+
+          def private_coordinate_matches(text: str) -> list[str]:
+              return [
+                  pattern
+                  for pattern in private_coordinate_patterns
+                  if re.search(pattern, text)
+              ]
+
+          leaked_patterns = private_coordinate_matches(public_assurance_text)
           if leaked_patterns:
               raise SystemExit(
                   f"private coordinates are present in assurance surface: {leaked_patterns}"
               )
+
+          private_link_mutations = [
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/commit/deadbeef",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/blob/deadbeef/file",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/tree/deadbeef",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/actions/runs/1",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
+              "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
+          ]
+          for mutation in private_link_mutations:
+              if not private_coordinate_matches(mutation):
+                  raise SystemExit(
+                      f"private repository coordinate mutation was not rejected: {mutation}"
+                  )
 
           link_pattern = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
           broken_local_links = []

@@ -24,7 +24,9 @@ Private implementation may be represented publicly only by a deliberately publis
 
 ## Never publish
 
-These prohibitions are unconditional. A publication review cannot override them.
+These prohibitions are unconditional.
+
+A publication review cannot override them.
 
 - Customer data and private repository content, including snippets, file contents, webhook payloads, archives, or derived content that could reconstruct the private source.
 - Secrets, credentials, tokens, and private keys, including their values, recoverable encodings, or material that enables their use.
