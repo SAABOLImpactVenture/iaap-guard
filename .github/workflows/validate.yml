@@ -411,7 +411,7 @@ jobs:
                       if not isinstance(key_node, yaml.nodes.ScalarNode):
                           continue
                       if key_node.value.casefold() in account_object_keys:
-                          explicit_children[key_node.value.casefold()] = child_node
+                          explicit_children[key_node.value] = child_node
                       elif key_node.tag == "tag:yaml.org,2002:merge":
                           if isinstance(child_node, yaml.nodes.MappingNode):
                               merged_mappings.append(child_node)
@@ -969,6 +969,11 @@ jobs:
               f'  id: "{synthetic_account}"\n'
               "account:\n"
               "  <<: *account-defaults",
+              "defaults: &case-account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *case-account-defaults\n"
+              "  ID: public",
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"accountIds": ["{synthetic_account}"]}}',
               f'{{"accountNumbers": ["{synthetic_account}"]}}',
