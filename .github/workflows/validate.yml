@@ -1316,6 +1316,20 @@ jobs:
               "accountId: 'harmless ''\n  "
               + synthetic_account
               + "'",
+              'accountId: "'
+              + synthetic_account[:6]
+              + chr(92)
+              + "\n  "
+              + synthetic_account[6:]
+              + '"',
+              'values: [ &account-flow "'
+              + synthetic_account
+              + '", harmless ]\naccount: *account-flow',
+              '"'
+              + chr(92)
+              + 'x61ccountId": "'
+              + synthetic_account
+              + '"',
               f"safe: &account-id '\n  {synthetic_account}'\naccount: *account-id",
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
