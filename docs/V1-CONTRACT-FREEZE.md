@@ -17,6 +17,7 @@ must not silently change V1 behavior.
 | Scoring | `coverage/v1` |
 | Evidence continuity | `evidence-manifest/v1` and `continuity/v1` |
 | Repository planning | `planning-report/v1` |
+| Planning catalog | `iaap-planning/v0.1.0` |
 | Product registration | `iaap-product/v1` |
 | Product assessment | `product-assessment/v1` |
 | Product planning | `product-planning-report/v1` |
@@ -24,8 +25,13 @@ must not silently change V1 behavior.
 | GitHub App authority | `config/github-app-v0.json` |
 | External campaign | `external-adoption/v1` |
 
-The corresponding JSON Schemas under `schemas/`, rule definitions under `rules/`,
-and authority configuration are the machine-readable sources of truth.
+The corresponding JSON Schemas under `schemas/`, the public planning catalog at
+`planning/catalog.yaml`, and the authority configuration are the public
+machine-readable sources of truth. The planning catalog is frozen at
+`iaap-planning/v0.1.0` and immutable public Git blob
+`9f63a1462a9c2acd7db387990caf10f612a40b8b`, with SHA-256
+`e8e21f08c78b071b8300c25ccadd661396c77c7ae6bce048ff12b9255cba7a1d`. The versioned
+rule-catalog identifier is public; rule implementation is maintained privately.
 
 ## Compatibility policy
 
@@ -40,7 +46,9 @@ V1 permits:
 
 V1 does not permit silently changing rule meaning, score calculation, conclusion
 authority, required fields, membership trust, evidence continuity semantics, or GitHub
-App permissions. Such changes require a new contract version and migration guidance.
+App permissions. A planning-catalog mapping must not change under
+`iaap-planning/v0.1.0`; a semantic change requires a new catalog version and migration
+guidance. Other backward-incompatible changes likewise require a new contract version.
 
 ## Frozen authority boundary
 

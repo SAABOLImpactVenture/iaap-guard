@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.1 — maintenance candidate
+
+- enforce composite Action retirement for both root manifest spellings, `action.yml` and
+  `action.yaml`, including isolated negative mutations in protected validation;
+- make customer data, private repository content, credentials, secrets, and internal
+  operational topology unconditionally non-public;
+- distinguish secret-manager storage from repository content without exposing live
+  identifiers or reference topology;
+- freeze the public planning catalog at `iaap-planning/v0.1.0` alongside the planning
+  schemas; and
+- publish a sanitized claim-to-evidence ledger with current WARNING/FAIL proof and
+  explicit alarm, logging, concurrency, rollback, and adopter-validation limits.
+
+This maintenance candidate changes no Guard rule, score, schema, GitHub App permission,
+runtime, deployment, licensing term, or product authority.
+
 ## Hosted distribution transition — 2026-08-18
 
 - moved the supported GitHub App runtime to the protected private core;

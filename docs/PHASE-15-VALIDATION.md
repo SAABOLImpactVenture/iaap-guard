@@ -26,6 +26,12 @@ The live campaign proved a controlled three-state sequence for a trusted multi-r
 
 A sanitized current acceptance record is retained in the public program hub at `artifacts/phase-15/acceptance-campaign.json`. The original operationally detailed artifact remains available in Git history for provenance; it is not the current supported publication surface.
 
+The later R1 maintenance probe separately proved current hosted WARNING and FAIL Check
+publication on a closed, unmerged public pull request. Its public revisions, Check
+identities, conclusions, and evidence digests are retained in
+[Public Guard Assurance Evidence](ASSURANCE-EVIDENCE.md). That maintenance probe does not
+change this Phase 15 readiness result or authorize a pilot.
+
 ## Boundary confirmation
 
 Phase 15 remains diagnostic and advisory. Product Readiness does not change Architecture Check authority, Evidence Continuity semantics, GitHub App permissions, infrastructure authority, or authorization determination.

@@ -15,7 +15,7 @@ automated authority.
 - [x] The product version is `1.0.0` and the V1 compatibility surface is documented.
 - [x] Support, security-support, and upgrade policies are published.
 - [x] Known limits and explicit exclusions are published from canonical sources.
-- [x] Installation, local use, GitHub Action use, and public App use remain documented.
+- [x] Installation and public App use are documented; the retired local CLI and composite Action have explicit migration guidance and are not presented as supported paths.
 - [x] Phase 8–17 acceptance evidence is linked from a final V1 validation record.
 - [x] The V1 release candidate passes the complete deterministic and protected checks.
 - [x] The repository declares IaaP Guard product development complete.

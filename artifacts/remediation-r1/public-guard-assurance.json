@@ -1,0 +1,161 @@
+{
+  "schemaVersion": "public-guard-assurance/v1",
+  "recordVersion": "r1-pg2/v1",
+  "recordedAt": "2026-09-01T04:54:36Z",
+  "sourceEvidenceCutoff": "2026-09-01T04:10:06Z",
+  "maintenanceCandidateVersion": "1.0.1",
+  "contracts": {
+    "ruleCatalog": "iaap-guard/v0.1.2",
+    "planningCatalog": "iaap-planning/v0.1.0",
+    "planningCatalogSha256": "e8e21f08c78b071b8300c25ccadd661396c77c7ae6bce048ff12b9255cba7a1d",
+    "repositoryPlanningSchema": "planning-report/v1",
+    "productPlanningSchema": "product-planning-report/v1"
+  },
+  "publicationBoundary": {
+    "customerDataPublished": false,
+    "privateRepositoryContentPublished": false,
+    "credentialsOrSecretsPublished": false,
+    "privateProducerRevisionPublished": false,
+    "workflowOrJobIdentifiersPublished": false,
+    "cloudResourceCoordinatesPublished": false,
+    "rawOperationalLogsPublished": false
+  },
+  "phaseCompletion": {
+    "phase9": {
+      "status": "COMPLETE_WITHIN_DOCUMENTED_BOUNDS",
+      "publicLocator": "artifacts/phase-9/index.json",
+      "limit": "portfolio-owned dogfood, not independent adoption"
+    },
+    "phase10": {
+      "status": "COMPLETE_HISTORICAL_BETA",
+      "publicLocator": "https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-10/beta-scorecard.json",
+      "limit": "historical beta proof; current negative paths are established by the R1 probe"
+    },
+    "phase12": {
+      "status": "COMPLETE_WITHIN_DOCUMENTED_BOUNDS",
+      "publicLocator": "https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json",
+      "limit": "two repositories in one organization"
+    },
+    "phase14": {
+      "status": "COMPLETE_WITHIN_DOCUMENTED_BOUNDS",
+      "publicLocator": "https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json",
+      "limit": "advisory evidence continuity only"
+    },
+    "phase15": {
+      "status": "COMPLETE_WITHIN_DOCUMENTED_BOUNDS",
+      "publicLocator": "https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-15/acceptance-campaign.json",
+      "limit": "controlled same-organization product; no external pilot"
+    },
+    "phase16": {
+      "status": "COMPLETE_WITH_OPEN_PRODUCTION_QUALIFICATION_GATES",
+      "publicLocator": "docs/PHASE-16-VALIDATION.md",
+      "limit": "point-in-time operations and same-organization installation mechanics"
+    },
+    "phase17": {
+      "status": "COMPLETE_WITHIN_DOCUMENTED_BOUNDS",
+      "publicLocator": "artifacts/phase-17/external-adoption.json",
+      "limit": "read-only unfamiliar-code evaluation; no adopter installation or customer-value test"
+    },
+    "phase18": {
+      "status": "COMPLETE_HISTORICAL_RELEASE",
+      "publicLocator": "https://github.com/SAABOLImpactVenture/iaap-guard/tree/v1.0.0",
+      "limit": "historical tag includes retired distribution paths; no GitHub Release object is claimed"
+    }
+  },
+  "claims": {
+    "negativeResultPublication": {
+      "status": "VERIFIED",
+      "scope": "closed-unmerged-synthetic-public-probe",
+      "pullRequest": "https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/pull/133",
+      "warning": {
+        "revision": "1faaae1a5da9d4c4c74d8a599f3a8b0088be2210",
+        "checkRunId": 99733468182,
+        "conclusion": "neutral",
+        "score": 67,
+        "finding": "IAP-P004",
+        "evidenceDigest": "sha256:b6ad49fa12a17290802099fb258ab6355ceae477f8ee0ee7bbf4f372ca7e9ce8"
+      },
+      "fail": {
+        "revision": "d7abf62086c3e26fae5f02209ded5ddd470d25d7",
+        "checkRunId": 99733893114,
+        "conclusion": "failure",
+        "score": 50,
+        "finding": "IAP-A002",
+        "evidenceDigest": "sha256:c575e7e2939f0773f6ecd31a1c4c3462e7b923df5bd04f1a5e8f91846ccc3a26"
+      },
+      "limits": [
+        "synthetic-public-repository-only",
+        "no-customer-data",
+        "no-pilot-or-production-authorization"
+      ]
+    },
+    "deploymentLogRetention": {
+      "status": "VERIFIED_WITH_SANITIZATION",
+      "logSha256": {
+        "identity": "9dc6d8fc9dc4f31030b5306ab773e1872f48695011176a684a8a3365b40841bf",
+        "preDeploymentVerify": "5c888afc52e31b5312e6509234554686c4901a07c8110a3dbb5ca7e994dfdd6a",
+        "plan": "903f753ca1e0a4d3f758f1ac2a0953ee61e029e6c7575593a3558bd64ca7c69d",
+        "deployment": "7202e9042356d5f0497b323ba83396a337d1b0d845e3478de0870c251ee3e7b2",
+        "postDeploymentVerify": "fb70024987fbd1c1653b76ef85270b80a2992c911dc0b159867a647a80328838"
+      },
+      "canonicalDigestSetSha256": "0f299fe02e60d18039cac543f0bb0bc110eae0a80416fc6335e449cdd9babf68",
+      "rawLogsPublished": false,
+      "customerLoggingGuarantee": false
+    },
+    "hostedApplicationLogging": {
+      "status": "NOT_ESTABLISHED",
+      "requestLogCompletenessValidated": false,
+      "redactionValidated": false,
+      "retentionValidated": false,
+      "incidentUseExercised": false
+    },
+    "alarmStatus": {
+      "status": "POINT_IN_TIME_ONLY",
+      "observedAt": "2026-08-18T23:20:00Z",
+      "configuredAlarms": 3,
+      "states": {
+        "OK": 3
+      },
+      "sanitizedRecordSha256": "ea6d11006272627f14931f4d56975178911afa315c49f86b467d60ca6e5049a1",
+      "alertDeliveryExercised": false,
+      "alertResponseExercised": false
+    },
+    "concurrencyAndEndurance": {
+      "status": "NOT_ESTABLISHED",
+      "representativeLoadTest": false,
+      "throttlingRecoveryTest": false,
+      "enduranceTest": false
+    },
+    "rollback": {
+      "status": "PROCEDURE_AND_TARGET_RETAINED",
+      "knownGoodTargetRetained": true,
+      "procedureRetained": true,
+      "rollbackExecuted": false,
+      "rollbackCompletionEstablished": false
+    },
+    "adopterValidation": {
+      "status": "INSTALLATION_MECHANICS_VERIFIED",
+      "pullRequest": "https://github.com/SAABOLImpactVenture/iaap-guard-adopter-validation/pull/1",
+      "baseRevision": "533b802b3b7afc24a0bfdd4f7480f0c7691ded6f",
+      "headRevision": "7bb6f811a7001233aaed861351eaf755df91b902",
+      "checkRunId": 95076939126,
+      "conclusion": "neutral",
+      "sameOrganization": true,
+      "independentAdoptionEstablished": false,
+      "customerValueEstablished": false,
+      "productionUseEstablished": false
+    },
+    "productionQualification": {
+      "status": "NOT_ESTABLISHED",
+      "slaPublished": false,
+      "controlledPilotAuthorized": false,
+      "productionReadinessClaimed": false
+    }
+  },
+  "authority": {
+    "repositoryWriteAuthorityAdded": false,
+    "infrastructureAuthorityAdded": false,
+    "authorizationAuthorityAdded": false,
+    "pilotAuthorized": false
+  }
+}
