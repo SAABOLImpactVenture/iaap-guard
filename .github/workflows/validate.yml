@@ -354,6 +354,9 @@ jobs:
           yaml_node_property_pattern = re.compile(
               r"^(?:(?:![^\s]+|&[^\s\[\]{},]+)\s+)+"
           )
+          yaml_block_scalar_pattern = re.compile(
+              r"^[|>][1-9+-]{0,2}(?:\s+#.*)?$"
+          )
           yaml_anchor_pattern = re.compile(r"&([^\s\[\]{},]+)")
           yaml_alias_pattern = re.compile(r"^\*([^\s\[\]{},]+)")
 
@@ -420,6 +423,19 @@ jobs:
                   ):
                       return True
                   key_indent = leading_indent(key_line)
+                  scalar_header = yaml_node_property_pattern.sub(
+                      "", key_match.group("value").lstrip()
+                  )
+                  if yaml_block_scalar_pattern.fullmatch(scalar_header):
+                      for scalar_line in lines[key_index + 1 :]:
+                          scalar_stripped = scalar_line.strip()
+                          if not scalar_stripped:
+                              continue
+                          if leading_indent(scalar_line) <= key_indent:
+                              break
+                          if account_id_pattern.search(scalar_line):
+                              return True
+                      continue
                   sequence_indent = None
                   for value_line in lines[key_index + 1 :]:
                       value_stripped = value_line.strip()
@@ -784,6 +800,7 @@ jobs:
               f'accountIds:\n  - "{synthetic_account}"',
               f'accountNumbers:\n- "{synthetic_account}"',
               f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
+              f'accountId: |-\n  {synthetic_account}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
               f'{{"accountId":\n"{synthetic_account}"}}',
               f'{{"accountId":{long_gap}"{synthetic_account}"}}',
