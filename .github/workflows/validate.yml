@@ -15,6 +15,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Install pinned YAML validation parser
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install \
+            --disable-pip-version-check \
+            --no-deps \
+            --only-binary=:all: \
+            --require-hashes \
+            -r .github/validation-requirements.txt
       - name: Validate public contracts and distribution boundary
         shell: bash
         run: |
@@ -27,6 +37,8 @@ jobs:
           from html import unescape
           from pathlib import Path
           from urllib.parse import unquote
+
+          import yaml
 
           for path in sorted(Path("schemas").glob("*.json")):
               json.loads(path.read_text(encoding="utf-8"))
@@ -861,6 +873,91 @@ jobs:
                   )
               return False
 
+          def yaml_node_account_value_present(
+              node: yaml.nodes.Node,
+          ) -> bool:
+              if isinstance(node, yaml.nodes.ScalarNode):
+                  normalized_value = decode_to_fixed_point(node.value).strip()
+                  return (
+                      account_id_pattern.fullmatch(normalized_value)
+                      is not None
+                  )
+              if isinstance(node, yaml.nodes.SequenceNode):
+                  return any(
+                      yaml_node_account_value_present(child)
+                      for child in node.value
+                  )
+              return False
+
+          def yaml_node_coordinate_present(
+              node: yaml.nodes.Node,
+              visited: set[int],
+          ) -> bool:
+              node_identity = id(node)
+              if node_identity in visited:
+                  return False
+              visited.add(node_identity)
+              if isinstance(node, yaml.nodes.MappingNode):
+                  for key_node, child_node in node.value:
+                      key = (
+                          key_node.value
+                          if isinstance(key_node, yaml.nodes.ScalarNode)
+                          else None
+                      )
+                      if (
+                          is_account_key(key)
+                          and yaml_node_account_value_present(child_node)
+                      ):
+                          return True
+                      if (
+                          isinstance(key, str)
+                          and key.casefold() == "principal"
+                          and isinstance(child_node, yaml.nodes.MappingNode)
+                      ):
+                          for principal_key_node, principal_value_node in (
+                              child_node.value
+                          ):
+                              principal_key = (
+                                  principal_key_node.value
+                                  if isinstance(
+                                      principal_key_node,
+                                      yaml.nodes.ScalarNode,
+                                  )
+                                  else None
+                              )
+                              if (
+                                  isinstance(principal_key, str)
+                                  and principal_key.casefold() == "aws"
+                                  and yaml_node_account_value_present(
+                                      principal_value_node
+                                  )
+                              ):
+                                  return True
+                      if yaml_node_coordinate_present(
+                          child_node, visited
+                      ):
+                          return True
+              elif isinstance(node, yaml.nodes.SequenceNode):
+                  return any(
+                      yaml_node_coordinate_present(child, visited)
+                      for child in node.value
+                  )
+              return False
+
+          def yaml_structured_coordinate_present(text: str) -> bool:
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if (
+                          document is not None
+                          and yaml_node_coordinate_present(document, set())
+                      ):
+                          return True
+              except yaml.YAMLError:
+                  return False
+              return False
+
           def json_iam_principal_account_present(value: object) -> bool:
               if isinstance(value, dict):
                   for key, child in value.items():
@@ -1018,6 +1115,8 @@ jobs:
                   or json_account_text_present(decoded_text)
                   or yaml_account_coordinate_present(text)
                   or yaml_account_coordinate_present(decoded_text)
+                  or yaml_structured_coordinate_present(text)
+                  or yaml_structured_coordinate_present(decoded_text)
               ):
                   matches.append("aws-account-label")
               if (
