@@ -450,7 +450,7 @@ jobs:
               repository_texts = [normalized_text]
               for coordinate_match in github_coordinate_pattern.finditer(normalized_text):
                   decoded_coordinate = coordinate_match.group(0)
-                  for _ in range(3):
+                  while True:
                       next_decoded_coordinate = unquote(decoded_coordinate)
                       if next_decoded_coordinate == decoded_coordinate:
                           break
@@ -526,6 +526,7 @@ jobs:
               f"{github_root}iaap-guard/%2e%2e/{synthetic_repository}",
               github_root + "%70rivate-producer",
               github_root + "%2570rivate-producer",
+              github_root + "%25252570rivate-producer",
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
