@@ -341,11 +341,45 @@ jobs:
               flags=re.IGNORECASE,
           )
 
+          yaml_node_property_pattern = re.compile(
+              r"^(?:(?:![^\\s]+|&[A-Za-z0-9_-]+)\\s+)+"
+          )
+          yaml_anchor_pattern = re.compile(r"&([A-Za-z0-9_-]+)")
+          yaml_alias_pattern = re.compile(r"^\\*([A-Za-z0-9_-]+)\\b")
+
           def leading_indent(line: str) -> int:
               return len(line) - len(line.lstrip(" "))
 
-          def aws_value_has_account(value: str) -> bool:
-              value = value.lstrip()
+          def yaml_account_anchors(text: str) -> set[str]:
+              lines = text.splitlines()
+              account_anchors = set()
+              for anchor_index, anchor_line in enumerate(lines):
+                  anchor_match = yaml_anchor_pattern.search(anchor_line)
+                  if not anchor_match:
+                      continue
+                  anchor_name = anchor_match.group(1)
+                  if account_id_pattern.search(anchor_line[anchor_match.end() :]):
+                      account_anchors.add(anchor_name)
+                      continue
+                  anchor_indent = leading_indent(anchor_line)
+                  for value_line in lines[anchor_index + 1 :]:
+                      value_stripped = value_line.strip()
+                      if not value_stripped or value_stripped.startswith("#"):
+                          continue
+                      if leading_indent(value_line) <= anchor_indent:
+                          break
+                      if account_id_pattern.search(value_line):
+                          account_anchors.add(anchor_name)
+                          break
+              return account_anchors
+
+          def aws_value_has_account(
+              value: str, account_anchors: set[str]
+          ) -> bool:
+              value = yaml_node_property_pattern.sub("", value.lstrip())
+              alias_match = yaml_alias_pattern.match(value)
+              if alias_match and alias_match.group(1) in account_anchors:
+                  return True
               if re.match(r"""["']?\d{12}(?!\d)""", value):
                   return True
               if value.startswith("["):
@@ -362,6 +396,7 @@ jobs:
               if inline_principal_pattern.search(text):
                   return True
               lines = text.splitlines()
+              account_anchors = yaml_account_anchors(text)
               for principal_index, principal_line in enumerate(lines):
                   if not principal_key_pattern.search(principal_line):
                       continue
@@ -377,7 +412,9 @@ jobs:
                       aws_match = aws_key_pattern.search(candidate)
                       if not aws_match:
                           continue
-                      if aws_value_has_account(aws_match.group(1)):
+                      if aws_value_has_account(
+                          aws_match.group(1), account_anchors
+                      ):
                           return True
                       for value_line in lines[aws_index + 1 :]:
                           value_stripped = value_line.strip()
@@ -391,7 +428,12 @@ jobs:
                               and not value_stripped.startswith("-")
                           ):
                               break
-                          if account_id_pattern.search(value_line):
+                          if account_id_pattern.search(
+                              value_line
+                          ) or aws_value_has_account(
+                              value_stripped.lstrip("-").lstrip(),
+                              account_anchors,
+                          ):
                               return True
                       break
               return False
@@ -490,6 +532,10 @@ jobs:
               f'{{"Principal": {{"AWS": ["{long_principal}", "{synthetic_account}"]}}}}',
               f'Principal:\n  AWS:\n    - "*"\n    - "{synthetic_account}"',
               f'Principal:\n  AWS:\n  - "*"\n  - "{synthetic_account}"',
+              f'Principal:\n  AWS: !!str "{synthetic_account}"',
+              f'Principal:\n  AWS: &account "{synthetic_account}"',
+              f'value: &principal-id "{synthetic_account}"\nPrincipal:\n  AWS: *principal-id',
+              f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
