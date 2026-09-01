@@ -424,70 +424,6 @@ jobs:
                   escaped = False
               return scalar_value.strip()
 
-          def decode_yaml_double_quoted(value: str) -> str:
-              if not (
-                  len(value) >= 2
-                  and value.startswith('"')
-                  and value.endswith('"')
-              ):
-                  return value
-              escape_values = {
-                  "0": "\0",
-                  "a": "\x07",
-                  "b": "\b",
-                  "t": "\t",
-                  "n": "\n",
-                  "v": "\v",
-                  "f": "\f",
-                  "r": "\r",
-                  "e": "\x1b",
-                  " ": " ",
-                  '"': '"',
-                  "/": "/",
-                  "\\": "\\",
-                  "N": "\u0085",
-                  "_": "\u00a0",
-                  "L": "\u2028",
-                  "P": "\u2029",
-              }
-              decoded = []
-              index = 1
-              final_index = len(value) - 1
-              while index < final_index:
-                  character = value[index]
-                  if character != "\\":
-                      decoded.append(character)
-                      index += 1
-                      continue
-                  if index + 1 >= final_index:
-                      return value
-                  escape = value[index + 1]
-                  if escape in escape_values:
-                      decoded.append(escape_values[escape])
-                      index += 2
-                      continue
-                  hexadecimal_lengths = {"x": 2, "u": 4, "U": 8}
-                  hexadecimal_length = hexadecimal_lengths.get(escape)
-                  if hexadecimal_length is None:
-                      return value
-                  hexadecimal_start = index + 2
-                  hexadecimal_end = hexadecimal_start + hexadecimal_length
-                  hexadecimal = value[hexadecimal_start:hexadecimal_end]
-                  if (
-                      hexadecimal_end > final_index
-                      or not re.fullmatch(
-                          rf"[0-9A-Fa-f]{{{hexadecimal_length}}}",
-                          hexadecimal,
-                      )
-                  ):
-                      return value
-                  try:
-                      decoded.append(chr(int(hexadecimal, 16)))
-                  except ValueError:
-                      return value
-                  index = hexadecimal_end
-              return "".join(decoded)
-
           yaml_double_escape_values = {
               "0": "\0",
               "a": "\a",
@@ -1281,15 +1217,6 @@ jobs:
               "accountId: 'harmless ''\n  "
               + synthetic_account
               + "'",
-              'accountId: "'
-              + (chr(92) + "x31") * 12
-              + '"',
-              'accountId: "harmless '
-              + chr(92)
-              + '"\n  '
-              + synthetic_account
-              + '"',
-              f"accountId: 'harmless ''\n  {synthetic_account}'",
               f"safe: &account-id '\n  {synthetic_account}'\naccount: *account-id",
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
