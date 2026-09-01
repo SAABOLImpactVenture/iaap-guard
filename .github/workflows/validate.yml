@@ -387,6 +387,7 @@ jobs:
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
+          github_root = "https://github.com/" + "SAABOLImpactVenture/"
           private_coordinate_mutations = [
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/commit/deadbeef",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/blob/deadbeef/file",
@@ -403,12 +404,12 @@ jobs:
               f"`git@github.com:SAABOLImpactVenture/{synthetic_repository}.git`",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository},",
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
-              f"https://github.com/SAABOLImpactVenture/iaap-guard/../{synthetic_repository}",
-              f"https://github.com/SAABOLImpactVenture/iaap-guard/..\\{synthetic_repository}",
-              f"https://github.com\\SAABOLImpactVenture\\{synthetic_repository}",
-              f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
-              "https://github.com/SAABOLImpactVenture/%70rivate-producer",
-              "https://github.com/SAABOLImpactVenture/%2570rivate-producer",
+              f"{github_root}iaap-guard/../{synthetic_repository}",
+              f"{github_root}iaap-guard/..\\{synthetic_repository}",
+              f"{github_root.replace('/', '\\')}{{synthetic_repository}}",
+              f"{github_root}iaap-guard/%2e%2e/{synthetic_repository}",
+              github_root + "%70rivate-producer",
+              github_root + "%2570rivate-producer",
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
