@@ -535,6 +535,43 @@ jobs:
                   return False
               return False
 
+          def decoded_yaml_scalars(text: str) -> list[str]:
+              scalars = []
+
+              def collect(
+                  node: yaml.nodes.Node,
+                  active: set[int],
+              ) -> None:
+                  node_identity = id(node)
+                  if node_identity in active:
+                      return
+                  if isinstance(node, yaml.nodes.ScalarNode):
+                      scalars.append(
+                          decode_to_fixed_point(node.value).replace("\\", "/")
+                      )
+                      return
+                  active.add(node_identity)
+                  try:
+                      if isinstance(node, yaml.nodes.MappingNode):
+                          for key_node, child_node in node.value:
+                              collect(key_node, active)
+                              collect(child_node, active)
+                      elif isinstance(node, yaml.nodes.SequenceNode):
+                          for child in node.value:
+                              collect(child, active)
+                  finally:
+                      active.remove(node_identity)
+
+              try:
+                  for document in yaml.compose_all(
+                      text, Loader=yaml.SafeLoader
+                  ):
+                      if document is not None:
+                          collect(document, set())
+              except yaml.YAMLError:
+                  return []
+              return scalars
+
           def json_iam_principal_account_present(value: object) -> bool:
               if isinstance(value, dict):
                   for key, child in value.items():
@@ -616,6 +653,8 @@ jobs:
                   decoded_text,
                   *decoded_json_strings(text),
                   *decoded_json_strings(decoded_text),
+                  *decoded_yaml_scalars(text),
+                  *decoded_yaml_scalars(decoded_text),
               ]
               for coordinate_text in tuple(repository_texts):
                   for coordinate_match in github_coordinate_pattern.finditer(
@@ -812,6 +851,10 @@ jobs:
               f"{github_root}iaap-guard/%2e%2e/{synthetic_repository}",
               github_root + "%70rivate-producer",
               github_root + "%2570rivate-producer",
+              'url: "'
+              + github_root
+              + chr(92)
+              + 'x70rivate-producer"',
               github_root + "%25252570rivate-producer",
               "https://github"
               + "%2ecom/"
