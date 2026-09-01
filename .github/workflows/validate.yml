@@ -367,7 +367,10 @@ jobs:
           yaml_block_scalar_pattern = re.compile(
               r"^[|>][1-9+-]{0,2}(?:\s+#.*)?$"
           )
-          yaml_anchor_pattern = re.compile(r"&([^\s\[\]{},]+)")
+          yaml_anchor_pattern = re.compile(
+              r"""(?:^|:\s+|-\s+)(?:![^\s]+\s+)*"""
+              r"""&(?P<name>[^\s\[\]{},]+)(?=\s|$)"""
+          )
           yaml_alias_pattern = re.compile(r"^\*([^\s\[\]{},]+)")
 
           def leading_indent(line: str) -> int:
@@ -418,6 +421,72 @@ jobs:
                   escaped = False
               return scalar_value.strip()
 
+          def decoded_yaml_scalar(value: str) -> str:
+              scalar_value = yaml_value_without_comment(value)
+              scalar_value = yaml_node_property_pattern.sub(
+                  "", scalar_value.lstrip()
+              )
+              if (
+                  len(scalar_value) >= 2
+                  and scalar_value.startswith('"')
+                  and scalar_value.endswith('"')
+              ):
+                  try:
+                      decoded_value = json.loads(scalar_value)
+                  except json.JSONDecodeError:
+                      return scalar_value
+                  return (
+                      decoded_value
+                      if isinstance(decoded_value, str)
+                      else scalar_value
+                  )
+              if (
+                  len(scalar_value) >= 2
+                  and scalar_value.startswith("'")
+                  and scalar_value.endswith("'")
+              ):
+                  return scalar_value[1:-1].replace("''", "'")
+              return scalar_value
+
+          def yaml_multiline_quoted_has_account(
+              lines: list[str],
+              value_index: int,
+              value_indent: int,
+              value: str,
+          ) -> bool:
+              scalar_value = yaml_node_property_pattern.sub(
+                  "", value.lstrip()
+              )
+              if not scalar_value.startswith(('"', "'")):
+                  return False
+              quote_style = scalar_value[0]
+              if scalar_value[1:].find(quote_style) != -1:
+                  return False
+              scalar_parts = [scalar_value[1:]]
+              for continuation_line in lines[value_index + 1 :]:
+                  if not continuation_line.strip():
+                      continue
+                  if leading_indent(continuation_line) <= value_indent:
+                      break
+                  continuation = continuation_line.strip()
+                  closing_index = continuation.find(quote_style)
+                  if closing_index == -1:
+                      scalar_parts.append(continuation)
+                      continue
+                  scalar_parts.append(continuation[:closing_index])
+                  folded_scalar = " ".join(scalar_parts)
+                  if quote_style == '"':
+                      try:
+                          folded_scalar = json.loads(
+                              '"' + folded_scalar + '"'
+                          )
+                      except json.JSONDecodeError:
+                          pass
+                  return (
+                      account_id_pattern.search(folded_scalar) is not None
+                  )
+              return False
+
           def yaml_account_anchors(text: str) -> set[str]:
               lines = text.splitlines()
               account_anchors = set()
@@ -425,14 +494,24 @@ jobs:
                   anchor_match = yaml_anchor_pattern.search(anchor_line)
                   if not anchor_match:
                       continue
-                  anchor_name = anchor_match.group(1)
+                  anchor_name = anchor_match.group("name")
                   anchor_value = yaml_value_without_comment(
                       anchor_line[anchor_match.end() :]
                   )
-                  if account_id_pattern.search(anchor_value):
+                  if aws_value_has_account(
+                      anchor_value, account_anchors
+                  ):
                       account_anchors.add(anchor_name)
                       continue
                   anchor_indent = leading_indent(anchor_line)
+                  if yaml_multiline_quoted_has_account(
+                      lines,
+                      anchor_index,
+                      anchor_indent,
+                      anchor_value,
+                  ):
+                      account_anchors.add(anchor_name)
+                      continue
                   if yaml_block_scalar_has_account(
                       lines,
                       anchor_index,
@@ -477,7 +556,7 @@ jobs:
           def aws_value_has_account(
               value: str, account_anchors: set[str]
           ) -> bool:
-              value = yaml_node_property_pattern.sub("", value.lstrip())
+              value = decoded_yaml_scalar(value)
               alias_match = yaml_alias_pattern.match(value)
               if alias_match and alias_match.group(1) in account_anchors:
                   return True
@@ -562,6 +641,13 @@ jobs:
                   if aws_value_has_account(key_value, account_anchors):
                       return True
                   if yaml_block_scalar_has_account(
+                      lines,
+                      value_index,
+                      key_indent,
+                      key_value,
+                  ):
+                      return True
+                  if yaml_multiline_quoted_has_account(
                       lines,
                       value_index,
                       key_indent,
@@ -945,6 +1031,16 @@ jobs:
               raise SystemExit(
                   "YAML tag quote suppressed an inline scalar comment"
               )
+          unrelated_comment_anchor = (
+              "safe: &public harmless\n"
+              "note: unrelated # &public checkRunId: "
+              f"{synthetic_public_identifier}\n"
+              "account: *public"
+          )
+          if private_coordinate_matches(unrelated_comment_anchor):
+              raise SystemExit(
+                  "YAML comment text was treated as an anchor declaration"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -1003,6 +1099,10 @@ jobs:
               f'accountId: |-\n  {synthetic_account}',
               f'-account: |-\n {synthetic_account}',
               f'? accountId\n: |-\n  {synthetic_account}',
+              'accountId: "'
+              + (chr(92) + "u0031") * 12
+              + '"',
+              f"safe: &account-id '\n  {synthetic_account}'\naccount: *account-id",
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
