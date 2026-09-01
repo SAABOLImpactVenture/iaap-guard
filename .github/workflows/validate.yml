@@ -388,6 +388,7 @@ jobs:
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
           github_root = "https://github.com/" + "SAABOLImpactVenture/"
+          backslash_github_root = github_root.replace("/", chr(92))
           private_coordinate_mutations = [
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/commit/deadbeef",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/blob/deadbeef/file",
@@ -406,7 +407,7 @@ jobs:
               f"The producer is https://github.com/SAABOLImpactVenture/{synthetic_repository}.",
               f"{github_root}iaap-guard/../{synthetic_repository}",
               f"{github_root}iaap-guard/..\\{synthetic_repository}",
-              f"{github_root.replace('/', '\\')}{{synthetic_repository}}",
+              f"{backslash_github_root}{synthetic_repository}",
               f"{github_root}iaap-guard/%2e%2e/{synthetic_repository}",
               github_root + "%70rivate-producer",
               github_root + "%2570rivate-producer",
