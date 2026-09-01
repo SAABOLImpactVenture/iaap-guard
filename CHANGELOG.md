@@ -1,6 +1,19 @@
 # Changelog
 
-## 1.0.1 — maintenance candidate
+## 1.0.2 — maintenance candidate
+
+- remove the literal nonpublic-producer repository coordinate and live cloud-account
+  identifier from the public validator;
+- reject nonpublic same-organization repository references through an explicit public
+  allowlist instead of naming the protected producer;
+- reject AWS ARNs and 12-digit cloud-account identifiers generically; and
+- prove the boundary with synthetic root, clone, path, case, punctuation, Markdown,
+  JSON, and text mutations.
+
+This maintenance candidate changes no Guard rule, score, schema, GitHub App permission,
+runtime, deployment, licensing term, product authority, or supported distribution path.
+
+## 1.0.1 — 2026-09-01 maintenance baseline
 
 - enforce composite Action retirement for both root manifest spellings, `action.yml` and
   `action.yaml`, including isolated negative mutations in protected validation;
@@ -13,8 +26,11 @@
 - publish a sanitized claim-to-evidence ledger with current WARNING/FAIL proof and
   explicit alarm, logging, concurrency, rollback, and adopter-validation limits.
 
-This maintenance candidate changes no Guard rule, score, schema, GitHub App permission,
-runtime, deployment, licensing term, or product authority.
+A tag and GitHub Release object were published for this maintenance baseline. That
+repository publication did not activate a new runtime, distribution path, pilot,
+production qualification, or product authority. The baseline changes no Guard rule,
+score, schema, GitHub App permission, runtime, deployment, licensing term, or product
+authority.
 
 ## Hosted distribution transition — 2026-08-18
 
