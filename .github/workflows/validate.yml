@@ -383,7 +383,13 @@ jobs:
                           value_stripped = value_line.strip()
                           if not value_stripped or value_stripped.startswith("#"):
                               continue
-                          if leading_indent(value_line) <= aws_indent:
+                          value_indent = leading_indent(value_line)
+                          if value_indent < aws_indent:
+                              break
+                          if (
+                              value_indent == aws_indent
+                              and not value_stripped.startswith("-")
+                          ):
                               break
                           if account_id_pattern.search(value_line):
                               return True
@@ -483,6 +489,7 @@ jobs:
               f'{{"Principal": {{"AWS": ["*", "{synthetic_account}"]}}}}',
               f'{{"Principal": {{"AWS": ["{long_principal}", "{synthetic_account}"]}}}}',
               f'Principal:\n  AWS:\n    - "*"\n    - "{synthetic_account}"',
+              f'Principal:\n  AWS:\n  - "*"\n  - "{synthetic_account}"',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
