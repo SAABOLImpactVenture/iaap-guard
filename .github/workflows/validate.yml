@@ -411,27 +411,37 @@ jobs:
               resolving.add(node_identity)
               try:
                   explicit_children = {}
-                  merged_mappings = []
+                  merge_groups = []
                   for key_node, child_node in node.value:
                       if not isinstance(key_node, yaml.nodes.ScalarNode):
                           continue
                       if key_node.tag == "tag:yaml.org,2002:merge":
                           if isinstance(child_node, yaml.nodes.MappingNode):
-                              merged_mappings.append(child_node)
+                              merge_groups.append([child_node])
                           elif isinstance(child_node, yaml.nodes.SequenceNode):
-                              merged_mappings.extend(
-                                  child
-                                  for child in child_node.value
-                                  if isinstance(child, yaml.nodes.MappingNode)
+                              merge_groups.append(
+                                  [
+                                      child
+                                      for child in child_node.value
+                                      if isinstance(
+                                          child, yaml.nodes.MappingNode
+                                      )
+                                  ]
                               )
                       else:
                           explicit_children[key_node.value] = child_node
                   effective_children = {}
-                  for merged_mapping in merged_mappings:
-                      for key, child in yaml_effective_mapping_children(
-                          merged_mapping, resolving, memo
-                      ).items():
-                          effective_children.setdefault(key, child)
+                  for merge_group in merge_groups:
+                      group_children = {}
+                      for merged_mapping in merge_group:
+                          for key, child in yaml_effective_mapping_children(
+                              merged_mapping, resolving, memo
+                          ).items():
+                              group_children.setdefault(key, child)
+                      # PyYAML accepts duplicate merge keys; a later merge
+                      # entry overrides an earlier entry, while earlier
+                      # mappings within one merge sequence retain precedence.
+                      effective_children.update(group_children)
                   effective_children.update(explicit_children)
                   memo[node_identity] = effective_children
                   return effective_children
@@ -980,6 +990,19 @@ jobs:
               raise SystemExit(
                   "an overridden inherited Principal AWS value remained effective"
               )
+          unrelated_yaml_later_harmless_merge = (
+              "live: &live-account-defaults\n"
+              f"  id: {synthetic_public_identifier}\n"
+              "public: &public-account-defaults\n"
+              "  id: public\n"
+              "account:\n"
+              "  <<: *live-account-defaults\n"
+              "  <<: *public-account-defaults"
+          )
+          if private_coordinate_matches(unrelated_yaml_later_harmless_merge):
+              raise SystemExit(
+                  "an earlier duplicate account merge overrode the later merge"
+              )
 
           synthetic_repository = "private-producer"
           synthetic_account = "1" * 12
@@ -1057,6 +1080,12 @@ jobs:
               "account:\n"
               "  <<: *case-account-defaults\n"
               "  ID: public",
+              "public: &public-account-defaults {id: public}\n"
+              "live: &live-account-defaults\n"
+              f'  id: "{synthetic_account}"\n'
+              "account:\n"
+              "  <<: *public-account-defaults\n"
+              "  <<: *live-account-defaults",
               "defaults: &principal-defaults\n"
               f'  AWS: "{synthetic_account}"\n'
               "Principal:\n"
