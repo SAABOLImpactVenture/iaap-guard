@@ -41,7 +41,7 @@ runtime activation and does not establish a new distribution path, pilot authori
 production qualification, or product authority.
 
 The `1.0.2` maintenance candidate removes live nonpublic-producer and cloud-account
-coordinates from the public validator. It uses an explicit public-repository allowlist,
+coordinates from the public validator. It uses an explicit portfolio-reference allowlist,
 generic cloud-coordinate detection, and synthetic negative fixtures. It does not move
 or recreate `v1.0.1`.
 
