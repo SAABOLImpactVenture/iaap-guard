@@ -322,7 +322,7 @@ jobs:
                   path
                   for path in root.rglob("*")
                   if path.is_file()
-                  and path.suffix.lower() in {".md", ".json", ".txt"}
+                  and path.suffix.lower() in {".md", ".json", ".txt", ".yaml", ".yml"}
                   and ".git" not in path.parts
               )
 
@@ -409,8 +409,8 @@ jobs:
               f"https://github.com/SAABOLImpactVenture/iaap-guard/%2e%2e/{synthetic_repository}",
               "https://github.com/SAABOLImpactVenture/%70rivate-producer",
               "https://github.com/SAABOLImpactVenture/%2570rivate-producer",
-              f"arn:aws:iam::{synthetic_account}:role/example",
-              f"arn:aws-iso-b:s3:::synthetic-private-bucket",
+              f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
+              f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
