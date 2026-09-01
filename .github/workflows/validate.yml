@@ -338,7 +338,7 @@ jobs:
               r"""["']?AWS["']?\s*:\s*(.*)$""", flags=re.IGNORECASE
           )
           account_mapping_pattern = re.compile(
-              r"""^\s*(?:-\s*)?["']?"""
+              r"""^\s*(?:-\s+)?["']?"""
               r"""(?P<key>[A-Za-z0-9 _-]*account"""
               r"""(?:[\s_-]*(?:id|number))?s?)["']?"""
               r"""\s*:\s*(?P<value>.*)$""",
@@ -442,11 +442,12 @@ jobs:
                       key_match.group("value"), account_anchors
                   ):
                       return True
-                  key_stripped = key_line.strip()
-                  key_without_sequence = key_stripped.lstrip("-").lstrip()
-                  key_indent = leading_indent(key_line) + (
-                      len(key_stripped) - len(key_without_sequence)
-                  )
+                  key_indent = key_match.start("key")
+                  if (
+                      key_indent > 0
+                      and key_line[key_indent - 1] in {'"', "'"}
+                  ):
+                      key_indent -= 1
                   if yaml_block_scalar_has_account(
                       lines,
                       key_index,
@@ -850,6 +851,7 @@ jobs:
               f'accountNumbers:\n- "{synthetic_account}"',
               f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
               f'accountId: |-\n  {synthetic_account}',
+              f'-account: |-\n {synthetic_account}',
               f'accountNumbers: >2+\n  {synthetic_account}',
               f'account:\n  - accountId: |-\n      {synthetic_account}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
