@@ -531,7 +531,7 @@ jobs:
               github_root + "%70rivate-producer",
               github_root + "%2570rivate-producer",
               github_root + "%25252570rivate-producer",
-              "https://github%2ecom/SAABOLImpactVenture/%70rivate-producer",
+              "https://github" + "%2ecom/SAABOLImpactVenture/%70rivate-producer",
               f"{'arn'}:{'aws'}:iam::{synthetic_account}:role/example",
               f"{'arn'}:{'aws-iso-b'}:s3:::synthetic-private-bucket",
               f"AWS account ID: {synthetic_account}",
