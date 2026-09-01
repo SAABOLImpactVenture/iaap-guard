@@ -312,7 +312,7 @@ jobs:
               ),
               "iam-principal-account": re.compile(
                   r"""["']Principal["']\s*:\s*\{[^{}]{0,512}"""
-                  r"""["']AWS["']\s*:\s*(?:\[\s*)?["']?\d{12}\b""",
+                  r"""["']AWS["']\s*:\s*(?:["']?\d{12}\b|\[[^\]]{0,512}\b\d{12}\b)""",
                   flags=re.IGNORECASE,
               ),
           }
@@ -419,6 +419,7 @@ jobs:
               f'{{"sourceAccount": "{synthetic_account}"}}',
               f'{{"Principal": {{"AWS": "{synthetic_account}"}}}}',
               f'{{"Principal": {{"AWS": ["{synthetic_account}"]}}}}',
+              f'{{"Principal": {{"AWS": ["*", "{synthetic_account}"]}}}}',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
           ]
           for mutation in private_coordinate_mutations:
