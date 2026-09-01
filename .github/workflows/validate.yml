@@ -442,9 +442,7 @@ jobs:
               node: yaml.nodes.Node,
               active: set[int] | None = None,
               memo: dict[int, bool] | None = None,
-              mapping_memo: (
-                  dict[int, dict[str, yaml.nodes.Node]] | None
-              ) = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
           ) -> bool:
               if active is None:
                   active = set()
@@ -457,49 +455,54 @@ jobs:
                   return memo[node_identity]
               if node_identity in active:
                   return False
+              if isinstance(node, yaml.nodes.ScalarNode):
+                  normalized_value = decode_to_fixed_point(node.value).strip()
+                  result = account_id_pattern.search(normalized_value) is not None
+                  memo[node_identity] = result
+                  return result
+              if not isinstance(
+                  node, (yaml.nodes.MappingNode, yaml.nodes.SequenceNode)
+              ):
+                  memo[node_identity] = False
+                  return False
               active.add(node_identity)
               try:
-                  if isinstance(node, yaml.nodes.ScalarNode):
-                      normalized_value = decode_to_fixed_point(
-                          node.value
-                      ).strip()
-                      result = (
-                          account_id_pattern.search(normalized_value)
-                          is not None
-                      )
-                  elif isinstance(node, yaml.nodes.MappingNode):
-                      result = any(
-                          key.casefold() in account_object_keys
-                          and yaml_node_account_value_present(
-                              child, active, memo, mapping_memo
-                          )
-                          for key, child in (
-                              yaml_effective_mapping_children(
-                                  node, memo=mapping_memo
-                              ).items()
-                          )
-                      )
-                  elif isinstance(node, yaml.nodes.SequenceNode):
-                      result = any(
-                          yaml_node_account_value_present(
-                              child, active, memo, mapping_memo
-                          )
-                          for child in node.value
-                      )
+                  if isinstance(node, yaml.nodes.MappingNode):
+                      children = [
+                          child
+                          for key, child in yaml_effective_mapping_children(
+                              node, memo=mapping_memo
+                          ).items()
+                          if key.casefold() in account_object_keys
+                      ]
                   else:
-                      result = False
+                      children = node.value
+                  result = any(
+                      yaml_node_account_value_present(
+                          child, active, memo, mapping_memo
+                      )
+                      for child in children
+                  )
+                  memo[node_identity] = result
+                  return result
               finally:
                   active.remove(node_identity)
-              memo[node_identity] = result
-              return result
 
           def yaml_node_account_coordinate_present(
               node: yaml.nodes.Node,
-              active: set[int],
-              memo: dict[int, bool],
-              account_value_memo: dict[int, bool],
-              mapping_memo: dict[int, dict[str, yaml.nodes.Node]],
+              active: set[int] | None = None,
+              memo: dict[int, bool] | None = None,
+              value_memo: dict[int, bool] | None = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
           ) -> bool:
+              if active is None:
+                  active = set()
+              if memo is None:
+                  memo = {}
+              if value_memo is None:
+                  value_memo = {}
+              if mapping_memo is None:
+                  mapping_memo = {}
               node_identity = id(node)
               if node_identity in memo:
                   return memo[node_identity]
@@ -507,20 +510,16 @@ jobs:
                   return False
               active.add(node_identity)
               try:
+                  result = False
                   if isinstance(node, yaml.nodes.MappingNode):
-                      result = False
-                      for key, child_node in (
-                          yaml_effective_mapping_children(
-                              node, memo=mapping_memo
-                          ).items()
-                      ):
-                          if (
-                              is_account_key(key)
-                              and yaml_node_account_value_present(
-                                  child_node,
-                                  memo=account_value_memo,
-                                  mapping_memo=mapping_memo,
-                              )
+                      children = yaml_effective_mapping_children(
+                          node, memo=mapping_memo
+                      )
+                      for key, child_node in children.items():
+                          if is_account_key(key) and yaml_node_account_value_present(
+                              child_node,
+                              memo=value_memo,
+                              mapping_memo=mapping_memo,
                           ):
                               result = True
                               break
@@ -528,7 +527,7 @@ jobs:
                               child_node,
                               active,
                               memo,
-                              account_value_memo,
+                              value_memo,
                               mapping_memo,
                           ):
                               result = True
@@ -539,17 +538,15 @@ jobs:
                               child,
                               active,
                               memo,
-                              account_value_memo,
+                              value_memo,
                               mapping_memo,
                           )
                           for child in node.value
                       )
-                  else:
-                      result = False
+                  memo[node_identity] = result
+                  return result
               finally:
                   active.remove(node_identity)
-              memo[node_identity] = result
-              return result
 
           def yaml_structured_account_coordinate_present(text: str) -> bool:
               try:
@@ -558,9 +555,7 @@ jobs:
                   ):
                       if (
                           document is not None
-                          and yaml_node_account_coordinate_present(
-                              document, set(), {}, {}, {}
-                          )
+                          and yaml_node_account_coordinate_present(document)
                       ):
                           return True
               except yaml.YAMLError:
@@ -569,11 +564,19 @@ jobs:
 
           def yaml_node_iam_principal_account_present(
               node: yaml.nodes.Node,
-              active: set[int],
-              memo: dict[int, bool],
-              account_value_memo: dict[int, bool],
-              mapping_memo: dict[int, dict[str, yaml.nodes.Node]],
+              active: set[int] | None = None,
+              memo: dict[int, bool] | None = None,
+              value_memo: dict[int, bool] | None = None,
+              mapping_memo: dict[int, dict[str, yaml.nodes.Node]] | None = None,
           ) -> bool:
+              if active is None:
+                  active = set()
+              if memo is None:
+                  memo = {}
+              if value_memo is None:
+                  value_memo = {}
+              if mapping_memo is None:
+                  mapping_memo = {}
               node_identity = id(node)
               if node_identity in memo:
                   return memo[node_identity]
@@ -581,42 +584,39 @@ jobs:
                   return False
               active.add(node_identity)
               try:
+                  result = False
                   if isinstance(node, yaml.nodes.MappingNode):
-                      result = False
-                      for key, child_node in (
-                          yaml_effective_mapping_children(
-                              node, memo=mapping_memo
-                          ).items()
-                      ):
+                      children = yaml_effective_mapping_children(
+                          node, memo=mapping_memo
+                      )
+                      for key, child_node in children.items():
                           if (
                               key.casefold() == "principal"
-                              and isinstance(
-                                  child_node, yaml.nodes.MappingNode
-                              )
+                              and isinstance(child_node, yaml.nodes.MappingNode)
                           ):
-                              for (
-                                  principal_key,
-                                  principal_value_node,
-                              ) in yaml_effective_mapping_children(
-                                  child_node, memo=mapping_memo
-                              ).items():
-                                  if (
-                                      principal_key.casefold() == "aws"
-                                      and yaml_node_account_value_present(
-                                          principal_value_node,
-                                          memo=account_value_memo,
-                                          mapping_memo=mapping_memo,
-                                      )
-                                  ):
-                                      result = True
-                                      break
-                              if result:
+                              principal_children = (
+                                  yaml_effective_mapping_children(
+                                      child_node, memo=mapping_memo
+                                  )
+                              )
+                              if any(
+                                  principal_key.casefold() == "aws"
+                                  and yaml_node_account_value_present(
+                                      principal_value,
+                                      memo=value_memo,
+                                      mapping_memo=mapping_memo,
+                                  )
+                                  for principal_key, principal_value in (
+                                      principal_children.items()
+                                  )
+                              ):
+                                  result = True
                                   break
                           if yaml_node_iam_principal_account_present(
                               child_node,
                               active,
                               memo,
-                              account_value_memo,
+                              value_memo,
                               mapping_memo,
                           ):
                               result = True
@@ -627,17 +627,15 @@ jobs:
                               child,
                               active,
                               memo,
-                              account_value_memo,
+                              value_memo,
                               mapping_memo,
                           )
                           for child in node.value
                       )
-                  else:
-                      result = False
+                  memo[node_identity] = result
+                  return result
               finally:
                   active.remove(node_identity)
-              memo[node_identity] = result
-              return result
 
           def yaml_structured_iam_principal_account_present(
               text: str,
@@ -648,9 +646,7 @@ jobs:
                   ):
                       if (
                           document is not None
-                          and yaml_node_iam_principal_account_present(
-                              document, set(), {}, {}, {}
-                          )
+                          and yaml_node_iam_principal_account_present(document)
                       ):
                           return True
               except yaml.YAMLError:
@@ -659,31 +655,33 @@ jobs:
 
           def decoded_yaml_scalars(text: str) -> list[str]:
               scalars = []
-              seen = set()
 
-              def collect(node: yaml.nodes.Node) -> None:
+              def collect(
+                  node: yaml.nodes.Node,
+                  visited: set[int],
+              ) -> None:
                   node_identity = id(node)
-                  if node_identity in seen:
+                  if node_identity in visited:
                       return
-                  seen.add(node_identity)
+                  visited.add(node_identity)
                   if isinstance(node, yaml.nodes.ScalarNode):
                       scalars.append(
                           decode_to_fixed_point(node.value).replace("\\", "/")
                       )
                   elif isinstance(node, yaml.nodes.MappingNode):
                       for key_node, child_node in node.value:
-                          collect(key_node)
-                          collect(child_node)
+                          collect(key_node, visited)
+                          collect(child_node, visited)
                   elif isinstance(node, yaml.nodes.SequenceNode):
                       for child in node.value:
-                          collect(child)
+                          collect(child, visited)
 
               try:
                   for document in yaml.compose_all(
                       text, Loader=yaml.SafeLoader
                   ):
                       if document is not None:
-                          collect(document)
+                          collect(document, set())
               except yaml.YAMLError:
                   return []
               return scalars
@@ -971,17 +969,16 @@ jobs:
               raise SystemExit(
                   "an overridden inherited account ID remained effective"
               )
-
-          yaml_alias_dag = "leaf: &level0 harmless\n"
-          for level in range(1, 7):
-              aliases = ", ".join([f"*level{level - 1}"] * 10)
-              yaml_alias_dag += (
-                  f"level{level}: &level{level} [{aliases}]\n"
-              )
-          yaml_alias_dag += "note: *level6"
-          if private_coordinate_matches(yaml_alias_dag):
+          unrelated_yaml_overridden_principal = (
+              "defaults: &principal-defaults\n"
+              f"  AWS: {synthetic_public_identifier}\n"
+              "Principal:\n"
+              "  <<: *principal-defaults\n"
+              "  AWS: public"
+          )
+          if private_coordinate_matches(unrelated_yaml_overridden_principal):
               raise SystemExit(
-                  "benign repeated YAML aliases changed coordinate results"
+                  "an overridden inherited Principal AWS value remained effective"
               )
 
           synthetic_repository = "private-producer"
@@ -990,6 +987,19 @@ jobs:
           long_principal = "a" * 600
           github_root = "https://github.com/" + "SAABOLImpactVenture/"
           backslash_github_root = github_root.replace("/", chr(92))
+          alias_dag_lines = [
+              f'level0: &level0 ["{synthetic_account}"]'
+          ]
+          for alias_level in range(1, 6):
+              repeated_aliases = ", ".join(
+                  [f"*level{alias_level - 1}"] * 10
+              )
+              alias_dag_lines.append(
+                  f"level{alias_level}: &level{alias_level} "
+                  f"[{repeated_aliases}]"
+              )
+          alias_dag_lines.append("account: *level5")
+          alias_dag_mutation = "\n".join(alias_dag_lines)
           private_coordinate_mutations = [
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/commit/deadbeef",
               f"https://github.com/SAABOLImpactVenture/{synthetic_repository}/blob/deadbeef/file",
@@ -1047,6 +1057,11 @@ jobs:
               "account:\n"
               "  <<: *case-account-defaults\n"
               "  ID: public",
+              "defaults: &principal-defaults\n"
+              f'  AWS: "{synthetic_account}"\n'
+              "Principal:\n"
+              "  <<: *principal-defaults",
+              alias_dag_mutation,
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"accountIds": ["{synthetic_account}"]}}',
               f'{{"accountNumbers": ["{synthetic_account}"]}}',
@@ -1099,10 +1114,6 @@ jobs:
               f'Principal: {{\nAWS: [\n"*", "{synthetic_account}"\n]\n}}',
               f'Principal:\n  AWS: !!str "{synthetic_account}"',
               f'Principal:\n  AWS: &account "{synthetic_account}"',
-              "principal-defaults: &principal-defaults\n"
-              f'  AWS: "{synthetic_account}"\n'
-              "Principal:\n"
-              "  <<: *principal-defaults",
               f'value: &principal-id "{synthetic_account}"\nPrincipal:\n  AWS: *principal-id',
               f'values: &principal-list\n  - "*"\n  - "{synthetic_account}"\nPrincipal:\n  AWS: *principal-list',
               f"{synthetic_account}.dkr.ecr.us-east-1.amazonaws.com/example",
