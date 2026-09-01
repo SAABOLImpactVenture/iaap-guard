@@ -172,8 +172,55 @@ jobs:
               raise SystemExit("rollback must not be claimed as executed")
           if claims["adopterValidation"]["independentAdoptionEstablished"]:
               raise SystemExit("same-organization validation must not claim adoption")
-          if claims["productionQualification"]["productionReadinessClaimed"]:
-              raise SystemExit("assurance record must not claim production readiness")
+          required_production_qualification = {
+              "status": "NOT_ESTABLISHED",
+              "slaPublished": False,
+              "controlledPilotAuthorized": False,
+              "productionReadinessClaimed": False,
+          }
+          required_authority = {
+              "repositoryWriteAuthorityAdded": False,
+              "infrastructureAuthorityAdded": False,
+              "authorizationAuthorityAdded": False,
+              "pilotAuthorized": False,
+          }
+
+          def authority_boundary_errors(record: dict) -> list[str]:
+              errors = []
+              if (
+                  record["claims"]["productionQualification"]
+                  != required_production_qualification
+              ):
+                  errors.append("production qualification")
+              if record["authority"] != required_authority:
+                  errors.append("authority")
+              return errors
+
+          authority_errors = authority_boundary_errors(assurance)
+          if authority_errors:
+              raise SystemExit(
+                  f"public Guard authority boundary changed: {authority_errors}"
+              )
+
+          authority_mutations = [
+              ("claims", "productionQualification", "slaPublished"),
+              ("claims", "productionQualification", "controlledPilotAuthorized"),
+              ("claims", "productionQualification", "productionReadinessClaimed"),
+              ("authority", "repositoryWriteAuthorityAdded"),
+              ("authority", "infrastructureAuthorityAdded"),
+              ("authority", "authorizationAuthorityAdded"),
+              ("authority", "pilotAuthorized"),
+          ]
+          for mutation_path in authority_mutations:
+              mutated_assurance = json.loads(json.dumps(assurance))
+              target = mutated_assurance
+              for key in mutation_path[:-1]:
+                  target = target[key]
+              target[mutation_path[-1]] = True
+              if not authority_boundary_errors(mutated_assurance):
+                  raise SystemExit(
+                      f"authority mutation was not rejected: {mutation_path}"
+                  )
 
           log_digests = claims["deploymentLogRetention"]["logSha256"]
           canonical_log_digests = json.dumps(
@@ -200,8 +247,10 @@ jobs:
 
           private_coordinate_patterns = [
               r"arn:aws",
-              r"(?:github\.com/|api\.github\.com/repos/)?"
-              r"SAABOLImpactVenture/iaap-guard-core/",
+              r"(?:https?://(?:api\.)?github\.com/(?:repos/)?|"
+              r"git@github\.com:|ssh://git@github\.com/)?"
+              r"SAABOLImpactVenture/iaap-guard-core"
+              r"(?:\.git)?(?:[/?#]|$)",
               r"\b070096877875\b",
           ]
 
@@ -210,7 +259,7 @@ jobs:
                   path
                   for path in root.rglob("*")
                   if path.is_file()
-                  and path.suffix.lower() in {".md", ".json"}
+                  and path.suffix.lower() in {".md", ".json", ".txt"}
                   and ".git" not in path.parts
               )
 
@@ -242,6 +291,10 @@ jobs:
               "https://github.com/SAABOLImpactVenture/iaap-guard-core/pull/1",
               "https://api.github.com/repos/SAABOLImpactVenture/iaap-guard-core/contents/file",
               "https://github.com/saabolimpactventure/IAAP-GUARD-CORE/blob/deadbeef/file",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core",
+              "https://github.com/SAABOLImpactVenture/iaap-guard-core.git",
+              "git@github.com:SAABOLImpactVenture/iaap-guard-core.git",
+              "ssh://git@github.com/SAABOLImpactVenture/iaap-guard-core.git",
           ]
           for mutation in private_link_mutations:
               if not private_coordinate_matches(mutation):
@@ -254,11 +307,12 @@ jobs:
                       "docs/PHASE-16-VALIDATION.md",
                       "docs/PRIVATE-EVIDENCE.MD",
                       "artifacts/private-evidence.JSON",
+                      "artifacts/phase-14/PRIVATE-EVIDENCE.TXT",
                   ):
                       assurance_document = root / relative_path
                       assurance_document.parent.mkdir(parents=True, exist_ok=True)
                       assurance_document.write_text(mutation, encoding="utf-8")
-                  if len(assurance_surface_paths(root)) != 3:
+                  if len(assurance_surface_paths(root)) != 4:
                       raise SystemExit("case-variant assurance surfaces were not selected")
                   if not private_coordinate_matches(assurance_surface_text(root)):
                       raise SystemExit(
