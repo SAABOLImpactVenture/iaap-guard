@@ -496,6 +496,9 @@ jobs:
                               return True
                           continue
                       sequence_value = value_stripped.lstrip("-").lstrip()
+                      sequence_key_indent = value_indent + (
+                          len(value_stripped) - len(sequence_value)
+                      )
                       sequence_mapping = account_mapping_pattern.match(
                           sequence_value
                       )
@@ -510,7 +513,7 @@ jobs:
                                   or yaml_block_scalar_has_account(
                                       lines,
                                       value_index,
-                                      value_indent,
+                                      sequence_key_indent,
                                       sequence_mapping.group("value"),
                                   )
                               )
@@ -777,6 +780,16 @@ jobs:
           if private_coordinate_matches(unrelated_yaml_sequence_mapping):
               raise SystemExit(
                   "unrelated YAML sequence metadata was rejected as an account"
+              )
+          unrelated_yaml_scalar_sibling = (
+              "account:\n"
+              "  - accountId: |-\n"
+              "      public metadata\n"
+              f"    checkRunId: {synthetic_public_identifier}"
+          )
+          if private_coordinate_matches(unrelated_yaml_scalar_sibling):
+              raise SystemExit(
+                  "YAML block scalar absorbed unrelated sibling metadata"
               )
 
           synthetic_repository = "private-producer"
