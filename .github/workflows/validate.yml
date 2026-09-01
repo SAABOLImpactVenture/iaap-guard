@@ -308,7 +308,7 @@ jobs:
               ),
           }
           contextual_account_pattern = re.compile(
-              r"""\b[A-Za-z0-9_-]*account(?:[\s_-]*(?:id|number))?\b"""
+              r"""\b[A-Za-z0-9_-]*account(?:[\s_-]*(?:id|number))?s?\b"""
               r"""["']?\s*[:=]\s*"""
               r"""(?:(?:![^\s]+|&[^\s\[\]{},]+)\s+)*"""
               r"""(?:["']?\d{12}\b|\[[^\]]*(?<!\d)\d{12}(?!\d)[^\]]*\])""",
@@ -417,7 +417,7 @@ jobs:
 
           def is_account_key(key: object) -> bool:
               return isinstance(key, str) and re.search(
-                  r"account(?:[\\s_-]*(?:id|number))?$",
+                  r"account(?:[\s_-]*(?:id|number))?s?$",
                   key,
                   flags=re.IGNORECASE,
               ) is not None
@@ -647,6 +647,8 @@ jobs:
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
+              f'{{"accountIds": ["{synthetic_account}"]}}',
+              f'{{"accountNumbers": ["{synthetic_account}"]}}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
               f'{{"accountId":\n"{synthetic_account}"}}',
               f'{{"accountId":{long_gap}"{synthetic_account}"}}',
