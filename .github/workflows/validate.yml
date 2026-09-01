@@ -417,7 +417,7 @@ jobs:
                           return any(
                               isinstance(key_node, yaml.nodes.ScalarNode)
                               and key_node.value.casefold()
-                              in {"id", "ids", "number", "numbers"}
+                              in {"<<", "id", "ids", "number", "numbers"}
                               and yaml_node_account_value_present(
                                   child_node, active
                               )
@@ -907,6 +907,7 @@ jobs:
               f"AWS account ID: {synthetic_account}",
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"account": {{"id": "{synthetic_account}"}}}}',
+              f'defaults: &account-defaults {{id: "{synthetic_account}"}}\naccount: {{<<: *account-defaults}}',
               f'account:\n  number: "{synthetic_account}"',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"accountIds": ["{synthetic_account}"]}}',
