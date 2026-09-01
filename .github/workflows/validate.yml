@@ -411,6 +411,26 @@ jobs:
                   return account_id_pattern.search(list_value) is not None
               return False
 
+          def yaml_block_scalar_has_account(
+              lines: list[str],
+              key_index: int,
+              key_indent: int,
+              value: str,
+          ) -> bool:
+              scalar_header = yaml_node_property_pattern.sub(
+                  "", value.lstrip()
+              )
+              if not yaml_block_scalar_pattern.fullmatch(scalar_header):
+                  return False
+              for scalar_line in lines[key_index + 1 :]:
+                  if not scalar_line.strip():
+                      continue
+                  if leading_indent(scalar_line) <= key_indent:
+                      break
+                  if account_id_pattern.search(scalar_line):
+                      return True
+              return False
+
           def yaml_account_coordinate_present(text: str) -> bool:
               lines = text.splitlines()
               account_anchors = yaml_account_anchors(text)
@@ -423,21 +443,17 @@ jobs:
                   ):
                       return True
                   key_indent = leading_indent(key_line)
-                  scalar_header = yaml_node_property_pattern.sub(
-                      "", key_match.group("value").lstrip()
-                  )
-                  if yaml_block_scalar_pattern.fullmatch(scalar_header):
-                      for scalar_line in lines[key_index + 1 :]:
-                          scalar_stripped = scalar_line.strip()
-                          if not scalar_stripped:
-                              continue
-                          if leading_indent(scalar_line) <= key_indent:
-                              break
-                          if account_id_pattern.search(scalar_line):
-                              return True
-                      continue
+                  if yaml_block_scalar_has_account(
+                      lines,
+                      key_index,
+                      key_indent,
+                      key_match.group("value"),
+                  ):
+                      return True
                   sequence_indent = None
-                  for value_line in lines[key_index + 1 :]:
+                  for value_index, value_line in enumerate(
+                      lines[key_index + 1 :], start=key_index + 1
+                  ):
                       value_stripped = value_line.strip()
                       if not value_stripped or value_stripped.startswith("#"):
                           continue
@@ -464,9 +480,17 @@ jobs:
                           if (
                               nested_mapping
                               and is_account_key(nested_mapping.group("key"))
-                              and aws_value_has_account(
-                                  nested_mapping.group("value"),
-                                  account_anchors,
+                              and (
+                                  aws_value_has_account(
+                                      nested_mapping.group("value"),
+                                      account_anchors,
+                                  )
+                                  or yaml_block_scalar_has_account(
+                                      lines,
+                                      value_index,
+                                      value_indent,
+                                      nested_mapping.group("value"),
+                                  )
                               )
                           ):
                               return True
@@ -478,9 +502,17 @@ jobs:
                       if sequence_mapping:
                           if (
                               is_account_key(sequence_mapping.group("key"))
-                              and aws_value_has_account(
-                                  sequence_mapping.group("value"),
-                                  account_anchors,
+                              and (
+                                  aws_value_has_account(
+                                      sequence_mapping.group("value"),
+                                      account_anchors,
+                                  )
+                                  or yaml_block_scalar_has_account(
+                                      lines,
+                                      value_index,
+                                      value_indent,
+                                      sequence_mapping.group("value"),
+                                  )
                               )
                           ):
                               return True
@@ -801,6 +833,8 @@ jobs:
               f'accountNumbers:\n- "{synthetic_account}"',
               f'account:\n  - label: synthetic metadata\n    accountId: "{synthetic_account}"',
               f'accountId: |-\n  {synthetic_account}',
+              f'accountNumbers: >2+\n  {synthetic_account}',
+              f'account:\n  - accountId: |-\n      {synthetic_account}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
               f'{{"accountId":\n"{synthetic_account}"}}',
               f'{{"accountId":{long_gap}"{synthetic_account}"}}',
