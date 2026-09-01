@@ -304,7 +304,7 @@ jobs:
               ),
               "aws-account-label": re.compile(
                   r"\b[A-Za-z0-9_-]*account(?:[\s_-]*(?:id|number))?\b"
-                  r"[^0-9\n]{0,16}\d{12}\b",
+                  r"[^0-9]{0,32}\d{12}\b",
                   flags=re.IGNORECASE,
               ),
               "ecr-registry-account": re.compile(
@@ -398,7 +398,45 @@ jobs:
                   return account_id_pattern.search(list_value) is not None
               return False
 
+          def account_value_present(value: object) -> bool:
+              if isinstance(value, bool):
+                  return False
+              if isinstance(value, int):
+                  return len(str(value)) == 12
+              if isinstance(value, str):
+                  return account_id_pattern.fullmatch(value.strip()) is not None
+              if isinstance(value, list):
+                  return any(account_value_present(child) for child in value)
+              return False
+
+          def json_iam_principal_account_present(value: object) -> bool:
+              if isinstance(value, dict):
+                  for key, child in value.items():
+                      if key.casefold() == "principal" and isinstance(child, dict):
+                          for principal_key, principal_value in child.items():
+                              if (
+                                  principal_key.casefold() == "aws"
+                                  and account_value_present(principal_value)
+                              ):
+                                  return True
+                      if json_iam_principal_account_present(child):
+                          return True
+              elif isinstance(value, list):
+                  return any(
+                      json_iam_principal_account_present(child) for child in value
+                  )
+              return False
+
           def iam_principal_account_present(text: str) -> bool:
+              try:
+                  structured_value = json.loads(text)
+              except json.JSONDecodeError:
+                  structured_value = None
+              if (
+                  structured_value is not None
+                  and json_iam_principal_account_present(structured_value)
+              ):
+                  return True
               if inline_principal_pattern.search(text):
                   return True
               lines = text.splitlines()
@@ -487,8 +525,16 @@ jobs:
                   matches.append("iam-principal-account")
               return sorted(set(matches))
 
-          public_assurance_text = assurance_surface_text(Path("."))
-          leaked_patterns = private_coordinate_matches(public_assurance_text)
+          public_assurance_paths = assurance_surface_paths(Path("."))
+          leaked_patterns = sorted(
+              {
+                  match
+                  for path in public_assurance_paths
+                  for match in private_coordinate_matches(
+                      path.read_text(encoding="utf-8")
+                  )
+              }
+          )
           if leaked_patterns:
               raise SystemExit(
                   f"private coordinates are present in assurance surface: {leaked_patterns}"
@@ -542,7 +588,9 @@ jobs:
               f'{{"accountId": "{synthetic_account}"}}',
               f'{{"recipientAccountId": "{synthetic_account}"}}',
               f'{{"sourceAccount": "{synthetic_account}"}}',
+              f'{{"accountId":\n"{synthetic_account}"}}',
               f'{{"Principal": {{"AWS": "{synthetic_account}"}}}}',
+              f'{{"Principal": {{\n"AWS": "{synthetic_account}"\n}}}}',
               f'{{"Principal": {{"AWS": ["{synthetic_account}"]}}}}',
               f'{{"Principal": {{"AWS": ["*", "{synthetic_account}"]}}}}',
               f'{{"Principal": {{"AWS": ["{long_principal}", "{synthetic_account}"]}}}}',
