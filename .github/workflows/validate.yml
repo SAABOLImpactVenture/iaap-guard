@@ -1030,7 +1030,7 @@ jobs:
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}/actions/runs/1",
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}/pull/1",
               f"https://api.github.com/repos/InfrastructureProductWorks/{synthetic_repository}/contents/file",
-              f"https://github.com/saabolimpactventure/{synthetic_repository.upper()}/blob/deadbeef/file",
+              f"https://github.com/infrastructureproductworks/{synthetic_repository.upper()}/blob/deadbeef/file",
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}",
               f"{github_root}.{synthetic_repository}",
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}.git",
