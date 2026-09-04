@@ -299,7 +299,7 @@ jobs:
               "multicloud-foundation-product-poc",
           }
           organization_repository_pattern = re.compile(
-              r"InfrastructureProductWorks/"
+              r"(?:InfrastructureProductWorks|SAABOLImpactVenture)/"
               r"([A-Za-z0-9._-]*[A-Za-z0-9_-])",
               flags=re.IGNORECASE,
           )
@@ -1031,6 +1031,7 @@ jobs:
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}/pull/1",
               f"https://api.github.com/repos/InfrastructureProductWorks/{synthetic_repository}/contents/file",
               f"https://github.com/infrastructureproductworks/{synthetic_repository.upper()}/blob/deadbeef/file",
+              f"https://github.com/saabolimpactventure/{synthetic_repository}/blob/deadbeef/file",
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}",
               f"{github_root}.{synthetic_repository}",
               f"https://github.com/InfrastructureProductWorks/{synthetic_repository}.git",
