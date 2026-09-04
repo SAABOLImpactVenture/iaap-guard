@@ -1,4 +1,4 @@
-# IaaP Guard
+# IaaP Guard™
 
 > **IaaS is what you buy. Infrastructure-as-a-Product is what you build. IaaP Guard helps teams keep building it that way.**
 
@@ -20,7 +20,7 @@ The App requires only repository metadata read, contents read, pull-request read
 
 Read [adoption prerequisites](docs/ADOPTION-PREREQUISITES.md), [known limits](docs/KNOWN-LIMITS.md), [environment compatibility Q&A](docs/ENVIRONMENT-COMPATIBILITY-QA.md), [production readiness and operations Q&A](docs/PRODUCTION-READINESS-QA.md), and [support guidance](docs/SUPPORT.md) before the first live evaluation or production-qualification decision.
 
-For the minimum trusted cloud-foundation starting point, readiness gates, responsibilities, and Composite AI's bounded advisory role, use the [authoritative IaaP Bootstrap and Foundation Readiness package](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/tree/main/docs/bootstrap-foundation-readiness). It is upstream guidance and does not add foundation-readiness rules, cloud access, provisioning, approval, or risk-acceptance authority to Guard V1.
+For the minimum trusted cloud-foundation starting point, readiness gates, responsibilities, and Composite AI's bounded advisory role, use the [authoritative IaaP Bootstrap and Foundation Readiness package](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/tree/main/docs/bootstrap-foundation-readiness). It is upstream guidance and does not add foundation-readiness rules, cloud access, provisioning, approval, or risk-acceptance authority to Guard V1.
 
 ## Composite Action retired
 
@@ -59,10 +59,10 @@ Useful product evidence centers developer outcomes: time to provision, product h
 
 ## Proven evidence
 
-- [Live multi-repository federation acceptance](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json)
-- [Live PR-base Evidence Continuity acceptance](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json)
-- [Private-runtime cutover acceptance PR](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after PASS 100 / SUPPORTED Check Run `95901157382`
-- [Current WARNING and FAIL publication probe](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after neutral Check Run `99733468182` and failure Check Run `99733893114`
+- [Live multi-repository federation acceptance](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json)
+- [Live PR-base Evidence Continuity acceptance](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json)
+- [Private-runtime cutover acceptance PR](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after PASS 100 / SUPPORTED Check Run `95901157382`
+- [Current WARNING and FAIL publication probe](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/pull/133), closed unmerged after neutral Check Run `99733468182` and failure Check Run `99733893114`
 - [Public claim-to-evidence ledger](docs/ASSURANCE-EVIDENCE.md), including explicit alarm, logging, concurrency, rollback, and adopter-validation limits
 
 ## Authority boundary
@@ -78,3 +78,12 @@ Report suspected vulnerabilities through GitHub Private Vulnerability Reporting.
 ## License
 
 The public contents of this repository remain under the existing [Apache License 2.0](LICENSE). This transition does not rewrite history or change the license previously attached to published material.
+
+## Trademarks
+
+IaaP Guard™ is an unregistered mark claimed by Larry Cureton. `IaaP` and
+Infrastructure-as-a-Product continue to be used descriptively and are not
+claimed alone by this notice. See the portfolio's
+[trademark and naming notice](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/blob/main/TRADEMARKS.md)
+for the complete current product-family naming and historical-evidence rule.
+No federal registration or ® symbol is claimed.
