@@ -54,7 +54,7 @@ Trusted federation identified `IAP-C001` because the Backstage storefront allowe
 
 This proves that repository health and product relationship health are distinct signals rather than different labels for the same scan.
 
-Canonical evidence: [`Phase 12 live federation acceptance`](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json).
+Canonical evidence: [`Phase 12 live federation acceptance`](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-12/live-federation-acceptance.json).
 
 ### Phase 14 — PR-base Evidence Continuity
 
@@ -80,7 +80,7 @@ Disposition: human_review_required
 
 The GitHub Check conclusion remained owned by the repository architecture result, preserving the advisory continuity boundary.
 
-Canonical evidence: [`Phase 14 live acceptance`](https://github.com/SAABOLImpactVenture/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json).
+Canonical evidence: [`Phase 14 live acceptance`](https://github.com/InfrastructureProductWorks/ai-powered-infrastructure-as-a-product/blob/main/artifacts/phase-14/live-acceptance.json).
 
 ## Smallest useful product
 
